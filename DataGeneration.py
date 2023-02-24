@@ -1,5 +1,5 @@
 import numpy as np
-import scipy as sp
+from scipy.stats import bernoulli
 
 def sigmaSim(p, k, communality):
     # p number of variables
@@ -54,7 +54,44 @@ def sigmaSim(p, k, communality):
     
     return(sigma, lambda_common, lambda_unique)
 
-p = 3
-k = 5
+k = 1
+p = 2
 communality = 1
-print(sigmaSim(p, k, communality))
+var_A = 2
+var_Y = 0.5
+
+n = 3
+
+sigma, lambda_common, lambda_unique = sigmaSim(p, k, communality)
+H_mean = np.zeros((k,))
+H_covar = np.identity(k)
+B = np.ones((1,k))
+C = 0.1
+F = 0.3 * np.ones((1,k))
+G = 0.25
+
+H_set = np.empty((k,n), dtype = np.float64)
+Z_set = np.empty((p,n), dtype = np.float64)
+A_set = np.empty((n), dtype = int)
+Y_set = np.empty((n), dtype = np.float64)
+
+for i in range(n):
+    epsilon = np.random.multivariate_normal(np.zeros((p,)), lambda_unique)
+    epsilon_A = np.random.normal(0, var_A)
+    epsilon_Y = np.random.normal(0, var_Y)
+    
+    H = np.random.multivariate_normal(H_mean, H_covar)
+    Z = np.dot(lambda_common, H) + epsilon
+    A_star = np.dot(B,H) + C + epsilon_A
+    A = 1 if (A_star >= 0) else 0
+    Y = np.dot(G,H) + G*A + epsilon_Y
+    
+    H_set[:,i] = H.T
+    Z_set[:,i] = Z.T
+    A_set[i] = A
+    Y_set[i] = Y
+    
+print(H_set)
+print(Z_set)
+print(A_set)
+print(Y_set)
