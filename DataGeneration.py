@@ -54,13 +54,13 @@ def sigmaSim(p, k, communality):
     
     return(sigma, lambda_common, lambda_unique)
 
-k = 1
-p = 2
+k = 2
+p = 5
 communality = 1
 var_A = 2
 var_Y = 0.5
 
-n = 3
+n = 30
 
 sigma, lambda_common, lambda_unique = sigmaSim(p, k, communality)
 H_mean = np.zeros((k,))
@@ -84,7 +84,7 @@ for i in range(n):
     Z = np.dot(lambda_common, H) + epsilon
     A_star = np.dot(B,H) + C + epsilon_A
     A = 1 if (A_star >= 0) else 0
-    Y = np.dot(G,H) + G*A + epsilon_Y
+    Y = np.dot(F,H) + G*A + epsilon_Y
     
     H_set[:,i] = H.T
     Z_set[:,i] = Z.T
