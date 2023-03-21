@@ -4,6 +4,7 @@ from scipy.stats import bernoulli
 def sigmaSim(p, k, communality):
     # p number of variables
     # k number of factors
+    # communality 1 low, 2 wide, 3 high
     
     A = np.zeros((p,k))
     
@@ -55,14 +56,14 @@ def sigmaSim(p, k, communality):
     return(sigma, lambda_common, lambda_unique)
 
 k = 2
-p = 5
+p = 3
 communality = 1
 var_A = 2
 var_Y = 0.5
-
-n = 30
+n = 100
 
 sigma, lambda_common, lambda_unique = sigmaSim(p, k, communality)
+
 H_mean = np.zeros((k,))
 H_covar = np.identity(k)
 B = np.ones((1,k))
@@ -95,3 +96,9 @@ print(H_set)
 print(Z_set)
 print(A_set)
 print(Y_set)
+
+np.savetxt("H1.csv", H_set, delimiter=",")
+np.savetxt("Z1.csv", Z_set, delimiter=",")
+np.savetxt("A1.csv", A_set, delimiter=",")
+np.savetxt("Y1.csv", Y_set, delimiter=",")
+
