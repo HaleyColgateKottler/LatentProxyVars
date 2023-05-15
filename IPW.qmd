@@ -1,0 +1,28 @@
+---
+title: "IPW"
+format: html
+---
+
+```{r}
+A = read.csv("A1.csv", header = FALSE)
+Z = read.csv("Z1.csv", header = FALSE)
+Y = read.csv("Y1.csv", header = FALSE)
+
+p = dim(Z)[2]
+
+AZ = Z
+AZ$A = A$V1
+
+m1 = glm(formula = A ~ V1 + V2 + V3, family = binomial(link = "logit"), data = AZ)
+```
+
+```{r}
+x = predict(m1, newdata = Z, type="response")
+
+EY1 = mean(unlist(A*Y/x))
+
+EY0 = mean(unlist((1-A)*Y/(1-x)))
+
+ATE = EY1-EY0
+ATE
+```
