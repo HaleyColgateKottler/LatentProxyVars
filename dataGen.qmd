@@ -1,0 +1,120 @@
+---
+title: "dataGen"
+format: html
+---
+
+```{r}
+sigmaSim = function(p, k, communality){
+    # p number of variables
+    # k number of factors
+    # communality 1 low, 2 wide, 3 high
+    
+    A = matrix(0, p, k)
+    
+    # need row entries to sum to k-1
+    A[,1] = sample(0:(k-1), p, replace = TRUE)
+    
+    for (i in 1:p){
+        if (k-2<1) break
+        for (j in 2:(k-2)){
+            current_sum = sum(A[i,])
+            if (current_sum == k-1){
+                A[i,j] = 0
+            } else {
+                A[i,j] = sample(0:(k-1-current_sum), 1, replace = TRUE)
+            }
+        }
+    }
+    A[,k] = (k-1)*matrix(1,1,p) - rowSums(A)
+    
+    # Add normal deviation
+    c = .1*sample(7:9, k)
+    x = rnorm(p*k)
+    x1 = matrix(x, nrow = p)
+    d = c(matrix(1,ncol=p, nrow = 1)/wordspace::rowNorms(x1))
+    
+    Y = A*c + d*x1*sqrt(1-c**2)
+    
+    # Apply skewing function
+    Y2 = Y + abs(Y) + 0.2
+    Y3 = abs(Y) + 0.2
+    Z = (1.2/2.2) * (Y*Y2) / Y3
+    
+    g = rep(1,p)/wordspace::rowNorms(Z)
+    
+    # Scale to set communality
+    if (communality == 1){
+        B1 = diag(.1*sample(2:4, p, replace=TRUE), p)
+    } else if (communality == 2){
+        B1 = diag(.1*sample(2:8, p, replace=TRUE), p)
+    } else if (communality == 3){
+        B1 = diag(.1*sample(6:8, p, replace=TRUE), p)
+    } else {
+        B1 = matrix(0,p,p)
+    }
+
+    B2 = diag(p) - B1
+    
+    # Final factor loading matrix
+    lambda_common = c(sqrt(B1)%*%g)*Z
+    lambda_unique = sqrt(B2)
+    
+    sigma = lambda_common%*%t(lambda_common) + lambda_unique%*%t(lambda_unique)
+    
+    return(list(sigma, lambda_common, lambda_unique))
+}
+```
+
+```{r}
+k = 2
+p = 3
+communality = 1
+var_A = 2
+var_Y = 0.5
+n = 500
+
+output = sigmaSim(p, k, communality)
+sigma = output[[1]]
+lambda_common = output[[2]]
+lambda_unique = output[[3]]
+
+H_mean = rep(0,k)
+H_covar = matrix(1,k,k)
+B = rep(1,k)
+C = 0.1
+F = 0.3 * rep(1,k)
+G = 0.25
+```
+
+```{r}
+H_set = matrix(, nrow = n, ncol = k)
+Z_set = matrix(, nrow = n, ncol = p)
+A_set = c()
+Y_set = c()
+
+for (i in 1:n){
+    epsilon = MASS::mvrnorm(n = 1, mu = rep(0,p), Sigma = lambda_unique)
+    epsilon_A = rnorm(1, mean = 0, sd = sqrt(var_A))
+    epsilon_Y = rnorm(1, mean = 0, sd = sqrt(var_Y))
+    
+    H = MASS::mvrnorm(n=1, mu = H_mean, Sigma = H_covar)
+    Z = lambda_common %*% H + epsilon
+    A_star = B%*%H + C + epsilon_A
+    if (A_star >= 0){
+      A = 1
+    } else {
+      A = 0
+    }
+    Y = F %*% H + G*A + epsilon_Y
+    
+    H_set[i,] = t(H)
+    Z_set[i,] = t(Z)
+    A_set[i] = A
+    Y_set[i] = Y
+}
+
+write.table(H_set, file = "H1.csv", row.names = FALSE, col.names = FALSE, sep = ",")
+write.table(Z_set, file = "Z1.csv", row.names = FALSE, col.names = FALSE, sep = ",")
+write.table(A_set, file = "A1.csv", row.names = FALSE, col.names = FALSE, sep = ",")
+write.table(Y_set, file = "Y1.csv", row.names = FALSE, col.names = FALSE, sep = ",")
+```
