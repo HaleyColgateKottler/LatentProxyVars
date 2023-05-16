@@ -22,7 +22,7 @@ total.diff1 = 0
 
 for (i in A1_indices){
   diffs = wordspace::rowNorms(sweep(z.mat[A0_indices,], 2, z.mat[i,]))
-  match = sample(which.min(diffs),1)
+  match = which.min(diffs)
   total.diff1 = total.diff1 + Y[i,] - Y[A0_indices[match],]
 }
 
@@ -34,7 +34,7 @@ total.diff2 = 0
 
 for (i in A0_indices){
   diffs = wordspace::rowNorms(sweep(z.mat[A1_indices,], 2, z.mat[i,]))
-  match = sample(which.min(diffs),1)
+  match = which.min(diffs)
   total.diff2 = total.diff2 - Y[i,] + Y[A1_indices[match],]
 }
 
