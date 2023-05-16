@@ -1,0 +1,19 @@
+---
+title: "Linear Regression"
+format: html
+---
+
+```{r}
+A = read.csv("A1.csv", header = FALSE)
+Z = read.csv("Z1.csv", header = FALSE)
+Y = read.csv("Y1.csv", header = FALSE)
+
+AZY = Z
+AZY$A = unlist(A)
+AZY$Y = unlist(Y)
+
+m1 = lm(Y~.,AZY)
+
+ATE = m1$coefficients["A"]
+ATE
+```
