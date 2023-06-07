@@ -1,0 +1,36 @@
+---
+title: "est lavaan"
+format: html
+---
+
+```{r}
+library(lavaan)
+```
+
+```{r}
+# Load data
+# mydata <- read.csv("mydata.csv")
+A = read.csv("A1.csv", header = FALSE)
+Z = read.csv("Z1.csv", header = FALSE)
+
+mydata = Z
+mydata$A = A$V1
+```
+
+```{r}
+# Specify factor-probit regression model
+model <- '
+  # Latent factors
+  factor1 =~ V1 + V2 + V3
+#  factor2 =~ x4 + x5 + x6
+  
+  # Probit regression
+  A ~ factor1 #+ factor2
+'
+
+# Fit model using DWLS estimator
+fit <- sem(model, data = mydata, estimator = "DWLS")
+
+# Summarize model output
+summary(fit)
+```
