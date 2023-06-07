@@ -14,7 +14,7 @@ A = read.csv("A1.csv", header = FALSE)
 Z = read.csv("Z1.csv", header = FALSE)
 
 mydata = Z
-mydata$A = A$V1
+mydata$A = ordered(A$V1, levels = c(0, 1))
 ```
 
 ```{r}
