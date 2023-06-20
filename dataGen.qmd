@@ -4,6 +4,10 @@ format: html
 ---
 
 ```{r}
+tag = "1"
+```
+
+```{r}
 sigmaSim = function(p, k, communality){
     # p number of variables
     # k number of factors
@@ -67,9 +71,9 @@ sigmaSim = function(p, k, communality){
 
 ```{r}
 k = 2
-p = 3
+p = 6
 communality = 1
-var_A = 2
+var_A = 1
 var_Y = 0.5
 n = 500
 
@@ -80,32 +84,33 @@ lambda_unique = output[[3]]
 
 H_mean = rep(0,k)
 H_covar = matrix(1,k,k)
-B = rep(1,k)
-C = 0.1
-F = 0.3 * rep(1,k)
+B = c(2,3)
+C = 0.3 * rep(1,k)
 G = 0.25
+save(k, p, communality, var_A, var_Y, n, sigma, lambda_common, lambda_unique, H_mean, H_covar, B, C, G, file = paste("param_", tag, ".RData", sep = ""))
 ```
 
 ```{r}
+load(paste("param_", tag, ".RData", sep = ""))
 H_set = matrix(, nrow = n, ncol = k)
 Z_set = matrix(, nrow = n, ncol = p)
 A_set = c()
 Y_set = c()
 
 for (i in 1:n){
-    epsilon = MASS::mvrnorm(n = 1, mu = rep(0,p), Sigma = lambda_unique)
+    epsilon_Z = MASS::mvrnorm(n = 1, mu = rep(0,p), Sigma = lambda_unique)
     epsilon_A = rnorm(1, mean = 0, sd = sqrt(var_A))
     epsilon_Y = rnorm(1, mean = 0, sd = sqrt(var_Y))
     
     H = MASS::mvrnorm(n=1, mu = H_mean, Sigma = H_covar)
-    Z = lambda_common %*% H + epsilon
-    A_star = B%*%H + C + epsilon_A
+    Z = lambda_common %*% H + epsilon_Z
+    A_star = B%*%H + epsilon_A
     if (A_star >= 0){
       A = 1
     } else {
       A = 0
     }
-    Y = F %*% H + G*A + epsilon_Y
+    Y = C %*% H + G*A + epsilon_Y
     
     H_set[i,] = t(H)
     Z_set[i,] = t(Z)
@@ -113,8 +118,8 @@ for (i in 1:n){
     Y_set[i] = Y
 }
 
-write.table(H_set, file = "H1.csv", row.names = FALSE, col.names = FALSE, sep = ",")
-write.table(Z_set, file = "Z1.csv", row.names = FALSE, col.names = FALSE, sep = ",")
-write.table(A_set, file = "A1.csv", row.names = FALSE, col.names = FALSE, sep = ",")
-write.table(Y_set, file = "Y1.csv", row.names = FALSE, col.names = FALSE, sep = ",")
+write.table(H_set, file = paste("H_", tag, ".csv", sep = ""), row.names = FALSE, col.names = FALSE, sep = ",")
+write.table(Z_set, file = paste("Z_", tag, ".csv", sep = ""), row.names = FALSE, col.names = FALSE, sep = ",")
+write.table(A_set, file = paste("A_", tag, ".csv", sep = ""), row.names = FALSE, col.names = FALSE, sep = ",")
+write.table(Y_set, file = paste("Y_", tag, ".csv", sep = ""), row.names = FALSE, col.names = FALSE, sep = ",")
 ```
