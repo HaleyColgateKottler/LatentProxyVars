@@ -1,0 +1,13 @@
+---
+title: "true_diff"
+format: html
+---
+
+```{r}
+tag = "1"
+load(paste("param_", tag, ".RData", sep = ""))
+```
+
+```{r}
+G
+```

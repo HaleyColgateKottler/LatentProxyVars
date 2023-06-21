@@ -2,11 +2,15 @@
 title: "IPW"
 format: html
 ---
+```{r}
+tag = "1"
+```
+
 
 ```{r}
-A = read.csv("A1.csv", header = FALSE)
-Z = read.csv("Z1.csv", header = FALSE)
-Y = read.csv("Y1.csv", header = FALSE)
+A = read.csv(paste("A_", tag, ".csv", sep = ""), header = FALSE)
+Z = read.csv(paste("Z_", tag, ".csv", sep = ""), header = FALSE)
+Y = read.csv(paste("Y_", tag, ".csv", sep = ""), header = FALSE)
 
 p = dim(Z)[2]
 

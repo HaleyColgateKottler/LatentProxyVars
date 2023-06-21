@@ -5,9 +5,13 @@ editor: visual
 ---
 
 ```{r}
-A = read.csv("A1.csv", header = FALSE)
-Z = read.csv("Z1.csv", header = FALSE)
-Y = read.csv("Y1.csv", header = FALSE)
+tag = "1"
+```
+
+```{r}
+A = read.csv(paste("A_", tag, ".csv", sep = ""), header = FALSE)
+Z = read.csv(paste("Z_", tag, ".csv", sep = ""), header = FALSE)
+Y = read.csv(paste("Y_", tag, ".csv", sep = ""), header = FALSE)
 ```
 
 ```{r}
@@ -43,4 +47,5 @@ est2 = total.diff2 / length(A0_indices)
 
 ```{r}
 ATE = (total.diff1 + total.diff2) / length(A$V1)
+ATE
 ```

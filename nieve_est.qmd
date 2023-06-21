@@ -1,5 +1,5 @@
 ---
-title: "Linear Regression"
+title: "nieve_est"
 format: html
 ---
 
@@ -12,13 +12,15 @@ tag = "1"
 A = read.csv(paste("A_", tag, ".csv", sep = ""), header = FALSE)
 Z = read.csv(paste("Z_", tag, ".csv", sep = ""), header = FALSE)
 Y = read.csv(paste("Y_", tag, ".csv", sep = ""), header = FALSE)
-
-AZY = Z
-AZY$A = unlist(A)
-AZY$Y = unlist(Y)
-
-m1 = lm(Y~.,AZY)
-
-ATE = m1$coefficients["A"]
-ATE
 ```
+
+```{r}
+A1 = which(A == 1)
+A0 = which(A == 0)
+
+Y1 = mean(unlist(Y$V1[A1]))
+Y0 = mean(unlist(Y$V1[A0]))
+
+Y1-Y0
+```
+
