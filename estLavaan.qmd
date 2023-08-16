@@ -27,7 +27,15 @@ A ~ h1 + h2
 
 A | 0*t1
 '
-fit <- cfa(model, data=mydata, ordered = "A")
+fit <- sem(model, data=mydata, ordered = "A")
 summary(fit, standardized=TRUE)
 inspect(fit, "partable")
+lambda.est = inspect(fit,what="est")$lambda
+theta.est = inspect(fit,what="est")$theta
+psi.est = inspect(fit,what="est")$psi
+beta.est = inspect(fit,what="est")$beta
+nu.est = inspect(fit,what="est")$nu
+alpha.est = inspect(fit,what="est")$alpha
+tau.est = inspect(fit,what="est")$tau
+delta.est = inspect(fit,what="est")$delta
 ```
