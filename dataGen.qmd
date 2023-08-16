@@ -82,12 +82,12 @@ sigma = output[[1]]
 lambda_common = output[[2]]
 lambda_unique = output[[3]]
 
-H_mean = rep(0,k)
-H_covar = matrix(1,k,k)
-B = c(2,3)
-C = 0.3 * rep(1,k)
-G = 0.25
-save(k, p, communality, var_A, var_Y, n, sigma, lambda_common, lambda_unique, H_mean, H_covar, B, C, G, file = paste("param_", tag, ".RData", sep = ""))
+H_mean = rep(1,k)
+H_covar = diag(k)
+B = c(1,3)
+C1 = 0.3 * t(rep(1,k))
+C2 = 0.7 * t(rep(1,k))
+save(k, p, communality, var_A, var_Y, n, sigma, lambda_common, lambda_unique, H_mean, H_covar, B, C1, C2, file = paste("param_", tag, ".RData", sep = ""))
 ```
 
 ```{r}
@@ -110,7 +110,7 @@ for (i in 1:n){
     } else {
       A = 0
     }
-    Y = C %*% H + G*A + epsilon_Y
+    Y = A * (C1 %*% H) + (1-A) * (C2 %*% H) + epsilon_Y
     
     H_set[i,] = t(H)
     Z_set[i,] = t(Z)

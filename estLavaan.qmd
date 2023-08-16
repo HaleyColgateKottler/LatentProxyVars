@@ -10,8 +10,8 @@ library(lavaan)
 ```{r}
 # Load data
 # mydata <- read.csv("mydata.csv")
-A = read.csv("A1.csv", header = FALSE)
-Z = read.csv("Z1.csv", header = FALSE)
+A = read.csv("A_1.csv", header = FALSE)
+Z = read.csv("Z_1.csv", header = FALSE)
 
 mydata = Z
 mydata$A = ordered(A$V1, levels = c(0, 1))
@@ -20,17 +20,14 @@ mydata$A = ordered(A$V1, levels = c(0, 1))
 ```{r}
 # Specify factor-probit regression model
 model <- '
-  # Latent factors
-  factor1 =~ V1 + V2 + V3
-#  factor2 =~ x4 + x5 + x6
-  
-  # Probit regression
-  A ~ factor1 #+ factor2
+efa("efa1")*h1 + 
+efa("efa1")*h2 =~ V1+V2+V3+V4+V5+V6
+
+A ~ h1 + h2
+
+A | 0*t1
 '
-
-# Fit model using DWLS estimator
-fit <- sem(model, data = mydata, estimator = "DWLS")
-
-# Summarize model output
-summary(fit)
+fit <- cfa(model, data=mydata, ordered = "A")
+summary(fit, standardized=TRUE)
+inspect(fit, "partable")
 ```
