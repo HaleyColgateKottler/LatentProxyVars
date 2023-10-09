@@ -72,22 +72,26 @@ sigmaSim = function(p, k, communality){
 ```{r}
 k = 1
 p = 3
-communality = 1
+communality = 2
 var_A = 1
 var_Y = 0.5
 n = 500
+A_intercept = .75
+Z_intercept = rep(-.2,p)
+Y_intercept = 4
 
 output = sigmaSim(p, k, communality)
 sigma = output[[1]]
 lambda = output[[2]]
 psi = output[[3]]
 
-H_mean = rep(1,k)
+H_mean = rep(0,k)
 H_covar = diag(k)
-B = c(3)
+B = c(.2)
+C0 = .4
 C1 = 0.3 * t(rep(1,k))
 C2 = 0.7 * t(rep(1,k))
-save(k, p, communality, var_A, var_Y, n, sigma, lambda, psi, H_mean, H_covar, B, C1, C2, file = paste("param_", tag, ".RData", sep = ""))
+save(k, p, communality, var_A, var_Y, n, sigma, lambda, psi, H_mean, H_covar, B, C0, C1, C2, A_intercept, Z_intercept, Y_intercept, file = paste("param_", tag, ".RData", sep = ""))
 ```
 
 ```{r}
@@ -103,14 +107,14 @@ for (i in 1:n){
     epsilon_Y = rnorm(1, mean = 0, sd = sqrt(var_Y))
     
     H = MASS::mvrnorm(n=1, mu = H_mean, Sigma = H_covar)
-    Z = lambda %*% H + epsilon_Z
-    A_star = B%*%H + epsilon_A
+    Z = lambda %*% H + Z_intercept + epsilon_Z
+    A_star = B%*%H + A_intercept + epsilon_A
     if (A_star >= 0){
       A = 1
     } else {
       A = 0
     }
-    Y = A * (C1 %*% H) + (1-A) * (C2 %*% H) + epsilon_Y
+    Y = A * (C1 %*% H) + (1-A) * (C2 %*% H) + C0 * A + Y_intercept + epsilon_Y
     
     H_set[i,] = t(H)
     Z_set[i,] = t(Z)

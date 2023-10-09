@@ -9,18 +9,22 @@ load(paste("param_", tag, ".RData", sep = ""))
 ```
 
 ```{r}
-lambda_unique_inv = solve(psi)
+psi_inv = solve(psi)
 H_covar_inv = solve(H_covar)
-lambda_psi = t(lambda) %*% lambda_unique_inv
+lambda_psi = t(lambda) %*% psi_inv
 
 z = rep(1,p)
 
-CATE = (C1-C2) %*% solve(lambda_psi %*% lambda + H_covar_inv) %*% (lambda_psi %*% z + H_covar_inv %*% H_mean)
+M = lambda_psi %*% lambda + H_covar_inv
+d = lambda_psi %*% (z-Z_intercept)
+M_inv = solve(M)
+
+CATE = (C1-C2) %*% solve(M) %*% d + C0
 CATE
 ```
 
 ```{r}
-ATE = (C1-C2) %*% H_mean
+ATE = C1
 
 ATE
 ```
