@@ -1,0 +1,114 @@
+---
+title: "Simulation"
+format: html
+---
+
+# Data Import
+```{r}
+tag = "100"
+
+load(paste("param_", tag, ".RData", sep = ""))
+
+A = read.csv(paste("A_", tag, ".csv", sep = ""), header = FALSE)
+Z = read.csv(paste("Z_", tag, ".csv", sep = ""), header = FALSE)
+Y = read.csv(paste("Y_", tag, ".csv", sep = ""), header = FALSE)
+```
+
+# True CATE
+```{r}
+psi_inv = solve(psi)
+H_covar_inv = solve(H_covar)
+lambda_psi = t(lambda) %*% psi_inv
+
+z = rep(1,p)
+
+M = lambda_psi %*% lambda + H_covar_inv
+d = lambda_psi %*% (z-Z_intercept)
+M_inv = solve(M)
+
+CATE = (C1-C2) %*% solve(M) %*% d + C0
+CATE
+```
+
+
+# Comparison Methods
+
+## Nieve Estimate
+```{r}
+A1 = which(A == 1)
+A0 = which(A == 0)
+
+Y1 = mean(unlist(Y$V1[A1]))
+Y0 = mean(unlist(Y$V1[A0]))
+
+Y1-Y0
+```
+
+
+## Linear Regression
+```{r}
+AZY = Z
+AZY$A = unlist(A)
+AZY$Y = unlist(Y)
+
+m1 = lm(Y~.,AZY)
+
+ATE = m1$coefficients["A"]
+ATE
+```
+
+## IPW
+```{r}
+p = dim(Z)[2]
+
+AZ = Z
+AZ$A = A$V1
+
+m1 = glm(formula = A ~ ., family = binomial(link = "logit"), data = AZ)
+x = predict(m1, newdata = Z, type="response")
+
+EY1 = mean(unlist(A*Y/x))
+
+EY0 = mean(unlist((1-A)*Y/(1-x)))
+
+ATE = EY1-EY0
+ATE
+```
+
+## Matching
+```{r}
+z.mat = as.matrix(Z)
+
+A1_indices = which(A==1)
+A0_indices = which(A==0)
+
+total.diff1 = 0
+
+for (i in A1_indices){
+  diffs = wordspace::rowNorms(sweep(z.mat[A0_indices,], 2, z.mat[i,]))
+  match = which.min(diffs)
+  total.diff1 = total.diff1 + Y[i,] - Y[A0_indices[match],]
+}
+
+est1 = total.diff1 / length(A1_indices)
+
+total.diff2 = 0
+
+for (i in A0_indices){
+  diffs = wordspace::rowNorms(sweep(z.mat[A1_indices,], 2, z.mat[i,]))
+  match = which.min(diffs)
+  total.diff2 = total.diff2 - Y[i,] + Y[A1_indices[match],]
+}
+
+est2 = total.diff2 / length(A0_indices)
+
+ATE = (total.diff1 + total.diff2) / length(A$V1)
+ATE
+```
+
+# Our Estimate
+```{r}
+
+```
+
+# Comparisons

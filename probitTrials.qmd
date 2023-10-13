@@ -1,0 +1,45 @@
+---
+title: "probitRegression"
+format: html
+---
+
+```{r}
+library(lavaan)
+```
+
+```{r}
+sample_size = 1000
+
+epsilon_A = rnorm(sample_size, mean = 0, sd = 1)
+
+H = MASS::mvrnorm(n=sample_size, mu = 0, Sigma = 1)
+A_star = .20*(H) + 0.5 + epsilon_A
+A = c(A_star>0)
+
+df = data.frame(H)
+df$A = as.integer(as.logical(A))
+```
+
+```{r}
+model <- '
+A ~ H
+A ~ 1
+
+A | 0*t1
+
+H ~ 0*1
+
+H ~~ 1*H
+'
+fit <- sem(model, data=df, ordered = c("A"))
+summary(fit, standardized=TRUE)
+inspect(fit, "partable")
+parameterEstimates(fit)
+```
+
+```{r}
+lavInspect(fit)
+coeffs = coef(fit)
+1/coeffs[1]
+```
+

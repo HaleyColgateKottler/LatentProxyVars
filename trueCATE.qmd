@@ -18,8 +18,9 @@ z = rep(1,p)
 M = lambda_psi %*% lambda + H_covar_inv
 d = lambda_psi %*% (z-Z_intercept)
 M_inv = solve(M)
+M_inv%*%d
 
-CATE = (C1-C2) %*% solve(M) %*% d + C0
+CATE = (C1-C2) %*% M_inv %*% d + C0
 CATE
 ```
 

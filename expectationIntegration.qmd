@@ -1,0 +1,103 @@
+---
+title: "expectations"
+format: html
+---
+
+```{r}
+library(lavaan)
+library(cubature)
+library(mvtnorm)
+```
+
+Load data
+```{r}
+tag = "1D"
+load(paste("param_", tag, ".RData", sep = ""))
+A = read.csv(paste("A_", tag, ".csv", sep = ""), header = FALSE)
+Z = read.csv(paste("Z_", tag, ".csv", sep = ""), header = FALSE)
+Y = read.csv(paste("Y_", tag, ".csv", sep = ""), header = FALSE)
+p = length(Z[1,])
+k=1
+
+mydata = Z
+mydata$A = ordered(A$V1, levels = c(0, 1))
+```
+
+```{r}
+ref.z = rep(1,p)
+psi_inv = solve(psi)
+H_covar_inv = solve(H_covar)
+lambda_psi = t(lambda) %*% psi_inv
+M.true = lambda_psi %*% lambda + H_covar_inv
+lambda_psi %*% (ref.z-Z_intercept)
+d.true = lambda_psi %*% (ref.z-Z_intercept)
+M_inv.true = solve(M.true)
+M_inv.true%*%d.true
+
+CATE.true = (C1-C2) %*% M_inv.true %*% d.true + C0
+```
+
+```{r}
+model <- '
+efa("efa1")*h1 =~ V1+V2+V3
+A ~ h1
+A | 0*t1
+A ~ 1
+
+h1 ~ 0*1
+'
+fit <- sem(model, data=mydata, ordered = "A")
+summary(fit, standardized=TRUE)
+lambda.est = inspect(fit,what="est")$lambda[1:p,1:k]
+psi.est = inspect(fit,what="est")$theta[1:p,1:p]
+sigma.est = inspect(fit,what="est")$psi[1:k,1:k]
+b.est = inspect(fit,what="est")$beta[k+1,1:k]
+nu.est = inspect(fit,what="est")$nu[1:p,1]
+c.est = inspect(fit,what="est")$alpha[k+1]
+```
+
+```{r}
+mydata$A <- as.numeric(as.character(mydata$A))
+
+M.est = t(lambda.est) %*% solve(psi.est) %*% lambda.est + solve(sigma.est)
+M.inv.est = solve(M.est)
+uCDF.generate = function(M.inv.est, d.est, b, c){
+  uCDF = function(u){
+    return(u*c(pnorm(u%*%b+c))*dmvnorm(u, M.inv.est%*%d.est, matrix(M.inv.est, nrow = k)))
+  }
+  return(uCDF)
+}
+
+expectations = matrix(, nrow = nrow(mydata), ncol = k)
+for(i in 1:nrow(mydata)){
+    z <- mydata[i,1:p]
+    a <- mydata[i,p+1]
+    d.est = t(lambda.est) %*% solve(psi.est) %*% (t(z - nu.est))
+    meanF = uCDF.generate(M.inv.est, d.est, b.est, c.est)
+    inner.constant = (t(b.est)%*%M.inv.est%*%d.est+c.est)/sqrt(t(b.est)%*%M.inv.est%*%b.est+1)
+    constant = c(a/pnorm(inner.constant) + (1-a)/(1-pnorm(inner.constant)))
+    expectations[i,] = constant*cubintegrate(meanF, rep(-Inf,k), rep(Inf,k), fDim=k)$integral
+}
+```
+
+```{r}
+df = data.frame(expectations)
+df$Y = Y$V1
+df$A = ordered(A$V1, levels = c(0, 1))
+reg = lm(Y ~ A*expectations, df)
+summary.lm(reg)
+
+betas = coef(reg)
+betas
+```
+
+```{r}
+linearCATE = function(z, coefs, lambda, psi, sigma.est, nu){
+  d = t(lambda) %*% solve(psi) %*% (z - nu)
+  M = t(lambda) %*% solve(psi) %*% lambda + solve(sigma.est)
+  return(c(coefs[4])%*%solve(M)%*%d + coefs[2])
+}
+
+linearCATE(ref.z, betas, lambda.est, psi.est, sigma.est, nu.est)
+```
+

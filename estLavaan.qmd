@@ -5,6 +5,8 @@ format: html
 
 ```{r}
 library(lavaan)
+library(cubature)
+library(mvtnorm)
 ```
 
 ```{r}
@@ -18,6 +20,8 @@ read data
 A = read.csv(paste("A_", tag, ".csv", sep = ""), header = FALSE)
 Z = read.csv(paste("Z_", tag, ".csv", sep = ""), header = FALSE)
 Y = read.csv(paste("Y_", tag, ".csv", sep = ""), header = FALSE)
+p = length(Z[1,])
+k=1
 
 mydata = Z
 mydata$A = ordered(A$V1, levels = c(0, 1))
@@ -27,34 +31,46 @@ parameter recovery for factor probit model
 ```{r}
 # Specify factor-probit regression model
 model <- '
-efa("efa1")*h1 + 
-efa("efa1")*h2 =~ V1+V2+V3+V4+V5+V6
+efa("efa1")*h1 + efa("efa1")*h2 =~ V1 + V2 + V3 + V4 + V5 + V6
 
 A ~ h1 + h2
 
 A | 0*t1
-'
-model <- '
-efa("efa1")*h1 =~ V1+V2+V3
-
-A ~ h1
 A ~ 1
 
-A|0*t1
+h1 + h2 ~ 0*1
+'
+
+model <- '
+efa("efa1")*h1 =~ V1+V2+V3
+A ~ h1
+A | 0*t1
+A ~ 1
 
 h1 ~ 0*1
 '
+k=1
+p=3
 fit <- sem(model, data=mydata, ordered = "A")
 summary(fit, standardized=TRUE)
-inspect(fit, "partable")
-lambda.est = inspect(fit,what="est")$lambda[1:3,1]
-psi.est = inspect(fit,what="est")$theta[1:3,1:3]
-sigma.est = inspect(fit,what="est")$psi[1,1]
-b.est = inspect(fit,what="est")$beta[2,1]
-nu.est = inspect(fit,what="est")$nu[1:3,1]
-alpha.est = inspect(fit,what="est")$alpha
-tau.est = inspect(fit,what="est")$tau
-delta.est = inspect(fit,what="est")$delta
+inspect(fit,what="est")$lambda
+lambda.est = inspect(fit,what="est")$lambda[1:p,1:k]
+lambda.est
+inspect(fit,what="est")$theta
+psi.est = inspect(fit,what="est")$theta[1:p,1:p]
+psi.est
+inspect(fit,what="est")$psi
+sigma.est = inspect(fit,what="est")$psi[1:k,1:k]
+sigma.est
+inspect(fit,what="est")$beta
+b.est = inspect(fit,what="est")$beta[k+1,1:k]
+b.est
+inspect(fit,what="est")$nu
+nu.est = inspect(fit,what="est")$nu[1:p,1]
+nu.est
+inspect(fit,what="est")$alpha
+c.est = inspect(fit,what="est")$alpha[k+1]
+c.est
 ```
 
 expectations for functions of H given Z
@@ -99,14 +115,42 @@ varianceH = function(za, lambda, psi, sigma.est, nu, b, alpha){
 }
 ```
 
-regression for betas
 ```{r}
-expectations = c()
-for(i in 1:nrow(mydata)) {
-    row <- mydata[i,]
-    expectations[i] = meanH(row, lambda.est, psi.est, sigma.est, alpha.est[2], b.est, nu.est)
+mydata$A <- as.numeric(as.character(mydata$A))
+
+M = t(lambda.est) %*% solve(psi.est) %*% lambda.est + solve(sigma.est)
+M.inv = solve(M)
+d = t(lambda.est) %*% solve(psi.est) %*% (rep(1,p) - nu.est)
+M.inv%*%d
+uCDF.generate = function(M.inv, d, b, c){
+  uCDF = function(u){
+    return(u*c(pnorm(u%*%b+c))*dmvnorm(u, M.inv%*%d, matrix(M.inv, nrow = k)))
+  }
+  return(uCDF)
 }
+
+meanF = uCDF.generate(M.inv, d, b.est, c.est)
+
+expectations2 = matrix(, nrow=nrow(mydata), ncol = k)
+expectations = matrix(, nrow = nrow(mydata), ncol = k)
+for(i in 1:nrow(mydata)){
+    z <- mydata[i,1:p]
+    a <- mydata[i,p+1]
+    d = t(lambda.est) %*% solve(psi.est) %*% (t(z - nu.est))
+    meanF = uCDF.generate(M.inv, d, b.est, c.est)
+    inner.constant = (t(b.est)%*%M.inv%*%d+c.est)/sqrt(t(b.est)%*%M.inv%*%b.est+1)
+    constant = c(a/pnorm(inner.constant) + (1-a)/(1-pnorm(inner.constant)))
+    expectations[i,] = constant*cubintegrate(meanF, rep(-Inf,k), rep(Inf,k), fDim=k)$integral
+    row = mydata[i,]
+    expectations2[i,] = meanH(row, lambda.est, psi.est, sigma.est, b.est, c.est, nu.est)
+}
+
+df = data.frame(expectations)
+df$ef2 = data.frame(expectations2)
 ```
+
+
+regression for betas
 
 ```{r}
 variances = c()
@@ -116,27 +160,31 @@ for(i in 1:nrow(mydata)) {
     variances[i] = varianceH(row, lambda.est, psi.est, sigma.est, nu.est, b.est, alpha.est[2])
 }
 
-mydata$expectations = expectations
+mydata[c('E1')] = expectations
 mydata$Y = Y$V1
-reg = lm(Y ~ A*expectations, mydata)
+reg = lm(Y ~ A*E1, mydata)
 summary.lm(reg)
 
 betas = coef(reg)
+betas
+expectations
 ```
 
 ```{r}
 linearCATE = function(z, coefs, lambda, psi, sigma.est, nu){
   d = t(lambda) %*% solve(psi) %*% (z - nu)
-  M = t(lambda) %*% solve(psi) %*% lambda + 1/sigma.est
-  return(coefs[4]*d/M + coefs[2])
+  M = t(lambda) %*% solve(psi) %*% lambda + solve(sigma.est)
+  return(c(coefs[4])%*%solve(M)%*%d + coefs[2])
 }
 
-linearCATE(c(1,1,1), betas, lambda.est, psi.est, sigma.est, nu.est)
+linearCATE(rep(1,p), betas, lambda.est, psi.est, sigma.est, nu.est)
 ```
 
 ```{r}
 mydata$variances = variances
-reg2 = lm(Y ~ A*expectations+A*variances, mydata)
+mydata$expectations.2 = variances + expectations^2
+
+reg2 = lm(Y ~ A*expectations+A*expectations.2, mydata)
 summary.lm(reg2)
 
 betas = coef(reg2)
@@ -145,9 +193,13 @@ quadCATE = function(z, coefs, lambda, psi, sigma.est, nu){
   d = t(lambda) %*% solve(psi) %*% (z - nu)
   M = t(lambda) %*% solve(psi) %*% lambda + 1/sigma.est
   
-  return(coefs[1] + coefs[5]*d/M + coefs[6]/M + coefs[6]*d^2/M^2)
+  return(coefs[2] + coefs[5]*d/M + coefs[6]/M + coefs[6]*d^2/M^2)
 }
 
 quadCATE(c(1,1,1), betas, lambda.est, psi.est, sigma.est, nu.est)
+```
+
+```{r}
+dmvnorm(1, 2, matrix(.5, nrow = k))
 ```
 
