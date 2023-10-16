@@ -4,7 +4,7 @@ format: html
 ---
 
 ```{r}
-tag = "1D"
+tag = "2D"
 ```
 
 ```{r}
@@ -97,7 +97,7 @@ azGen = function(tag){
       } else {
         A = 0
       }
-      Y = A * (C1 %*% H) + (1-A) * (C2 %*% H) + C0 * A + Y_intercept + epsilon_Y
+      Y = A * (C1 %*% H) + (C2 %*% H) + C0 * A + Y_intercept + epsilon_Y
       
       H_set[i,] = t(H)
       Z_set[i,] = Z

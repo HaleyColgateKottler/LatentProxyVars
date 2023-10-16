@@ -157,8 +157,42 @@ variances = c()
 
 for(i in 1:nrow(mydata)) {
     row <- mydata[i,]
-    variances[i] = varianceH(row, lambda.est, psi.est, sigma.est, nu.est, b.est, alpha.est[2])
+    variances[i] = varianceH(row, lambda.est, psi.est, sigma.est, nu.est, b.est, c.est)
 }
+u2CDF.generate = function(M.inv.est, d.est, b, c){
+  u2CDF = function(u){
+    return(u^2*c(pnorm(u%*%b+c))*dmvnorm(u, M.inv.est%*%d.est, matrix(M.inv.est, nrow = k)))
+  }
+  return(u2CDF)
+}
+expectations = matrix(, nrow = nrow(mydata), ncol = k)
+variances2 = matrix(, nrow = nrow(mydata), ncol = k)
+for(i in 1:nrow(mydata)){
+    z <- mydata[i,1:p]
+    a <- mydata[i,p+1]
+    d.est = t(lambda.est) %*% solve(psi.est) %*% (t(z - nu.est))
+    meanF = uCDF.generate(M.inv.est, d.est, b.est, c.est)
+    inner.constant = (t(b.est)%*%M.inv.est%*%d.est+c.est)/sqrt(t(b.est)%*%M.inv.est%*%b.est+1)
+    constant = c(a/pnorm(inner.constant) + (1-a)/(1-pnorm(inner.constant)))
+    meanU = constant*cubintegrate(meanF, rep(-Inf,k), rep(Inf,k), fDim=k)$integral
+    expectations[i,] = meanU
+    
+    varF = u2CDF.generate(M.inv.est, d.est, b.est, c.est)
+    varU = constant*cubintegrate(varF, rep(-Inf,k), rep(Inf,k), fDim=k)$integral
+    variances2[i,] = varU
+}
+
+df=data.frame(variances)
+df$A = A$V1
+new = var3[A$V1 == 1,]
+df$v2 = variances2
+df0 = df[df$A==0,]
+old = df0$variances
+new = df$var3
+old = df[df$A==1,]$variances
+sum(which(old<new))
+max(abs(old-new))
+min(abs(old-new))
 
 mydata[c('E1')] = expectations
 mydata$Y = Y$V1

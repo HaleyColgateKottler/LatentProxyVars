@@ -3,9 +3,16 @@ title: "Simulation"
 format: html
 ---
 
+```{r}
+library(lavaan)
+library(cubature)
+library(mvtnorm)
+```
+
+
 # Data Import
 ```{r}
-tag = "100"
+tag = "2D"
 
 load(paste("param_", tag, ".RData", sep = ""))
 
@@ -14,7 +21,7 @@ Z = read.csv(paste("Z_", tag, ".csv", sep = ""), header = FALSE)
 Y = read.csv(paste("Y_", tag, ".csv", sep = ""), header = FALSE)
 ```
 
-# True CATE
+# True CATE and ATE
 ```{r}
 psi_inv = solve(psi)
 H_covar_inv = solve(H_covar)
@@ -26,8 +33,9 @@ M = lambda_psi %*% lambda + H_covar_inv
 d = lambda_psi %*% (z-Z_intercept)
 M_inv = solve(M)
 
-CATE = (C1-C2) %*% solve(M) %*% d + C0
-CATE
+CATE.true = C1 %*% solve(M) %*% d + C0
+
+ATE.true = C0
 ```
 
 
@@ -41,7 +49,7 @@ A0 = which(A == 0)
 Y1 = mean(unlist(Y$V1[A1]))
 Y0 = mean(unlist(Y$V1[A0]))
 
-Y1-Y0
+nieve.ATE = Y1-Y0
 ```
 
 
@@ -53,8 +61,7 @@ AZY$Y = unlist(Y)
 
 m1 = lm(Y~.,AZY)
 
-ATE = m1$coefficients["A"]
-ATE
+linear.ATE = m1$coefficients["A"]
 ```
 
 ## IPW
@@ -71,8 +78,7 @@ EY1 = mean(unlist(A*Y/x))
 
 EY0 = mean(unlist((1-A)*Y/(1-x)))
 
-ATE = EY1-EY0
-ATE
+IPW.ATE = EY1-EY0
 ```
 
 ## Matching
@@ -102,13 +108,107 @@ for (i in A0_indices){
 
 est2 = total.diff2 / length(A0_indices)
 
-ATE = (total.diff1 + total.diff2) / length(A$V1)
-ATE
+matching.ATE = (total.diff1 + total.diff2) / length(A$V1)
 ```
 
 # Our Estimate
 ```{r}
+model <- '
+efa("efa1")*h1 =~ V1+V2+V3
+A ~ h1
+A | 0*t1
+A ~ 1
 
+h1 ~ 0*1
+'
+model <- '
+efa("efa1")*h1 + efa("efa1")*h2 =~ V1+V2+V3+V4+V5+V6
+A ~ h1 + h2
+A | 0*t1
+A ~ 1
+
+h1 ~ 0*1
+h2 ~ 0*1
+'
+
+p=6
+k=2
+
+mydata = Z
+mydata$A = ordered(A$V1, levels = c(0, 1))
+
+fit <- sem(model, data=mydata, ordered = "A")
+lambda.est = inspect(fit,what="est")$lambda[1:p,1:k]
+psi.est = inspect(fit,what="est")$theta[1:p,1:p]
+sigma.est = inspect(fit,what="est")$psi[1:k,1:k]
+b.est = inspect(fit,what="est")$beta[k+1,1:k]
+nu.est = inspect(fit,what="est")$nu[1:p,1]
+c.est = inspect(fit,what="est")$alpha[k+1]
+
+mydata$A <- as.numeric(as.character(mydata$A))
+
+M.est = t(lambda.est) %*% solve(psi.est) %*% lambda.est + solve(sigma.est)
+M.inv.est = solve(M.est)
+uCDF.generate = function(M.inv.est, d.est, b, c){
+  uCDF = function(u){
+    return(u*c(pnorm(u%*%b+c))*dmvnorm(u, M.inv.est%*%d.est, matrix(M.inv.est, nrow = k)))
+  }
+  return(uCDF)
+}
+
+psi.est.inv = solve(psi.est)
+constant.denom = sqrt(t(b.est)%*%M.inv.est%*%b.est+1)
+
+expectations = matrix(, nrow = nrow(mydata), ncol = k)
+for(i in 1:nrow(mydata)){
+    z <- mydata[i,1:p]
+    a <- mydata[i,p+1]
+    d.est = t(lambda.est) %*% psi.est.inv %*% (t(z - nu.est))
+    meanF = uCDF.generate(M.inv.est, d.est, b.est, c.est)
+    inner.constant = (t(b.est)%*%M.inv.est%*%d.est+c.est)/constant.denom
+    constant = c(a/pnorm(inner.constant) + (1-a)/(1-pnorm(inner.constant)))
+    expectations[i,] = constant*cubintegrate(meanF, rep(-Inf,k), rep(Inf,k), fDim=k)$integral
+}
+
+df = data.frame(expectations)
+df$Y = Y$V1
+df$A = ordered(A$V1, levels = c(0, 1))
+reg = lm(Y ~ A*expectations, df)
+
+betas = coef(reg)
+
+linearCATE = function(z, coefs, lambda, psi, sigma.est, nu){
+  k = sqrt(length(sigma.est))
+  d = t(lambda) %*% solve(psi) %*% (z - nu)
+  M = t(lambda) %*% solve(psi) %*% lambda + solve(sigma.est)
+  lower.index = 3+k
+  higher.index = 2+2*k
+  return(c(coefs[lower.index:higher.index])%*%solve(M)%*%d + coefs[2])
+}
+
+ATE.est = 0
+errors = c()
+for(i in 1:length(A$V1)){
+  z = Z[i,]
+  cate = linearCATE(t(z), betas, lambda.est, psi.est, sigma.est, nu.est)
+  ATE.est = ATE.est + cate
+  
+  M.true = lambda_psi %*% lambda + H_covar_inv
+  d.true = lambda_psi %*% (t(z)-Z_intercept)
+  M_inv.true = solve(M.true)
+  
+  CATE.true = C1 %*% M_inv.true %*% d.true + C0
+  errors[i] = abs(cate-CATE.true)
+}
+ATE.est = ATE.est/length(A$V1)
 ```
 
 # Comparisons
+
+|Method|Estimate|Error|
+|:-:|:-:|:-:|
+|Nieve|`r nieve.ATE`|`r nieve.ATE-ATE.true`|
+|Linear|`r linear.ATE`|`r linear.ATE-ATE.true`|
+|Matching|`r matching.ATE`|`r matching.ATE-ATE.true`|
+|IPW|`r IPW.ATE`|`r IPW.ATE-ATE.true`|
+|Ours|`r ATE.est`|`r ATE.est-ATE.true`|
