@@ -127,6 +127,16 @@
       ],
       "Hash": "5edbbabab6ce0bf7900a74fd4358628e"
     },
+    "cubature": {
+      "Package": "cubature",
+      "Version": "2.1.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "Rcpp"
+      ],
+      "Hash": "2aa17112c073602a08b1f4a7db282cac"
+    },
     "digest": {
       "Package": "digest",
       "Version": "0.6.31",

@@ -12,7 +12,7 @@ library(mvtnorm)
 
 # Data Import
 ```{r}
-tag = "2D"
+tag = "1D"
 
 load(paste("param_", tag, ".RData", sep = ""))
 
@@ -75,7 +75,6 @@ m1 = glm(formula = A ~ ., family = binomial(link = "logit"), data = AZ)
 x = predict(m1, newdata = Z, type="response")
 
 EY1 = mean(unlist(A*Y/x))
-
 EY0 = mean(unlist((1-A)*Y/(1-x)))
 
 IPW.ATE = EY1-EY0
@@ -113,14 +112,7 @@ matching.ATE = (total.diff1 + total.diff2) / length(A$V1)
 
 # Our Estimate
 ```{r}
-model <- '
-efa("efa1")*h1 =~ V1+V2+V3
-A ~ h1
-A | 0*t1
-A ~ 1
 
-h1 ~ 0*1
-'
 model <- '
 efa("efa1")*h1 + efa("efa1")*h2 =~ V1+V2+V3+V4+V5+V6
 A ~ h1 + h2
@@ -131,8 +123,17 @@ h1 ~ 0*1
 h2 ~ 0*1
 '
 
-p=6
-k=2
+model <- '
+efa("efa1")*h1 =~ V1+V2+V3
+A ~ h1
+A | 0*t1
+A ~ 1
+
+h1 ~ 0*1
+'
+
+p=3
+k=1
 
 mydata = Z
 mydata$A = ordered(A$V1, levels = c(0, 1))
