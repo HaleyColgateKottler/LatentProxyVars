@@ -27,54 +27,83 @@ CATE.errors = function(df, params, betas, tag){
     z = Z[i,]
     cate = linearCATE(t(z), betas, params)
     cate.true = trueCATE(tag, z)
-    errors[i] = abs(cate-cate.true)
+    errors[i] = cate-cate.true
   }
   return(errors)
 }
 
-tag = "2D"
-k=2
-p=6
+errors = c()
+nieve = c()
+IPW = c()
+match = c()
+linear = c()
 
-rawData = dataImport(tag)
 
-ATE.true = trueATE(tag)
+# dataGen(1, 6, 2, .5, 500, -.3, c(.2, -.1, .6), 0, c(1), c(.2), .6, c(.8), c(-.2), "1Da")
+# betas
+# dataGen(2,6,2,.5,500,.3,c(.5,.25, .3, -.1, -.2, .4),2, matrix(c(1,-.5,-.5,1), nrow = 2, byrow = TRUE), c(.7,.3),2,c(4,1), c(1,2),"2D")
 
-nieve.ATE = nieveEst(rawData)
-linear.ATE = linearEst(rawData)
-IPW.ATE = IPWest(rawData)
-matching.ATE = matchingEst(rawData)
 
-model <- '
-efa("efa1")*h1 =~ V1+V2+V3
-A ~ h1
-A | 0*t1
-A ~ 1
+for (i in 1:10){
+  print(i)
+  tag = "1Db"
+  azGen(tag)
+  k=1
+  p=3
+  
+  rawData = dataImport(tag)
+  
+  ATE.true = trueATE(tag)
+  
+  nieve.ATE = nieveEst(rawData)
+  nieve[i] = abs(ATE.true - nieve.ATE)
+  linear.ATE = linearEst(rawData)
+  linear[i] = abs(ATE.true - linear.ATE)
+  IPW.ATE = IPWest(rawData)
+  IPW[i] = abs(ATE.true - IPW.ATE)
+  matching.ATE = matchingEst(rawData)
+  match[i] = abs(ATE.true - matching.ATE)
+  
+  model = '
+  efa("efa1")*h1 + efa("efa1")*h2 =~ V1+V2+V3+V4+V5+V6
+  A ~ h1 + h2
+  A | 0*t1
+  A ~ 1
+  
+  h1 ~ 0*1
+  h2 ~ 0*1
+  '
+  
+  model <- '
+  efa("efa1")*h1 =~ V1+V2+V3 
+  A ~ h1
+  A | 0*t1
+  A ~ 1
+  
+  h1 ~ 0*1
+  '
+  
+  params = fitUZA(model, rawData, k, p)
+  expected.df = fitExpectations(params, rawData, k, p, 1)
+  
+  yModel = '
+  Y ~ .*.
+  '
+  
+  betas = fitMeanModel(yModel, subset(expected.df, select = c(Y, A, expectations1)))
+  
+  ATEest = ATE.est(expected.df, params, betas)
+  
+  errors[i] = abs(ATEest-ATE.true)
+}
 
-h1 ~ 0*1
-'
-model = '
-efa("efa1")*h1 + efa("efa1")*h2 =~ V1+V2+V3+V4+V5+V6
-A ~ h1 + h2
-A | 0*t1
-A ~ 1
+errs.df = data.frame(errors, IPW, linear, match, nieve)
+errs.df
+write.table(errs.df, file = paste("errors.csv", sep = ""), sep = ",")
+hist(errors-IPW)
 
-h1 ~ 0*1
-h2 ~ 0*1
-'
-
-params = fitUZA(model, rawData, k, p)
-expected.df = fitExpectations(params, rawData, k, p, 1)
-
-yModel = '
-Y ~ .*.
-'
-
-betas = fitMeanModel(yModel, subset(expected.df, select = c(Y, A, expectations1)))
-betas
-ATE.est = ATE.est(expected.df, params, betas)
-
-errors = CATE.errors(rawData, params, betas, tag)
-
-mean(errors[rawData$A == 0])
-mean(errors[rawData$A == 1])
+mean(errors)
+mean(IPW)
+mean(linear)
+mean(match)
+mean(nieve)
