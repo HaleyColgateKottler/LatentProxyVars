@@ -108,4 +108,4 @@ dataGen = function(k, p, communality, var_Y, n, A_intercept, Z_intercept, Y_inte
 
 dataGen(2,6,2,.5,1000,.3,c(.5,.25, .3, -.1, -.2, .4),2, matrix(c(1,.5,.5,1), nrow = 2, byrow = TRUE), c(.7,.3),2,c(4,1), c(1,2),"2D")
 
-dataGen(1,3,1, .25, 300, -.2, c(.2, -.1, .4), 2, c(1), c(.9), -.7, c(-.2), c(.8), "1Db")
+dataGen(1,6,3, .25, 500, -.2, c(.2, -.1, .4), 2, c(1), c(.9), -.7, c(-.2), c(.8), "1Db")

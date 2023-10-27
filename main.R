@@ -32,24 +32,26 @@ CATE.errors = function(df, params, betas, tag){
   return(errors)
 }
 
-errors = c()
+latent.errors = c()
+latent.est = c()
 nieve = c()
-IPW = c()
+IPW.est = c()
+IPW.errors = c()
 match = c()
 linear = c()
 
 
-# dataGen(1, 6, 2, .5, 500, -.3, c(.2, -.1, .6), 0, c(1), c(.2), .6, c(.8), c(-.2), "1Da")
+dataGen(1, 6, 2, 1, 500, -.3, c(.2, -.1, .6, .4, -.7, .9), 0, c(.64), c(.7), .6, c(.8), c(-.4), "1Dc")
 # betas
 # dataGen(2,6,2,.5,500,.3,c(.5,.25, .3, -.1, -.2, .4),2, matrix(c(1,-.5,-.5,1), nrow = 2, byrow = TRUE), c(.7,.3),2,c(4,1), c(1,2),"2D")
 
 
-for (i in 1:10){
+for (i in 1:100){
   print(i)
-  tag = "1Db"
+  tag = "1Dc"
   azGen(tag)
   k=1
-  p=3
+  p=6
   
   rawData = dataImport(tag)
   
@@ -60,7 +62,8 @@ for (i in 1:10){
   linear.ATE = linearEst(rawData)
   linear[i] = abs(ATE.true - linear.ATE)
   IPW.ATE = IPWest(rawData)
-  IPW[i] = abs(ATE.true - IPW.ATE)
+  IPW.errors[i] = abs(ATE.true - IPW.ATE)
+  IPW.est[i] = IPW.ATE
   matching.ATE = matchingEst(rawData)
   match[i] = abs(ATE.true - matching.ATE)
   
@@ -75,7 +78,7 @@ for (i in 1:10){
   '
   
   model <- '
-  efa("efa1")*h1 =~ V1+V2+V3 
+  efa("efa1")*h1 =~ V1+V2+V3+V4+V5+V6
   A ~ h1
   A | 0*t1
   A ~ 1
@@ -84,6 +87,7 @@ for (i in 1:10){
   '
   
   params = fitUZA(model, rawData, k, p)
+
   expected.df = fitExpectations(params, rawData, k, p, 1)
   
   yModel = '
@@ -93,17 +97,18 @@ for (i in 1:10){
   betas = fitMeanModel(yModel, subset(expected.df, select = c(Y, A, expectations1)))
   
   ATEest = ATE.est(expected.df, params, betas)
-  
-  errors[i] = abs(ATEest-ATE.true)
+  latent.est[i] = ATEest
+  latent.errors[i] = abs(ATEest-ATE.true)
 }
 
-errs.df = data.frame(errors, IPW, linear, match, nieve)
+errs.df = data.frame(latent.est, latent.errors, IPW.est, IPW.errors, linear, match, nieve)
 errs.df
 write.table(errs.df, file = paste("errors.csv", sep = ""), sep = ",")
-hist(errors-IPW)
-
-mean(errors)
-mean(IPW)
+hist(latent.errors-IPW.errors)
+hist(latent.est)
+hist(IPW.est)
+mean(latent.errors)
+mean(IPW.errors)
 mean(linear)
 mean(match)
 mean(nieve)
