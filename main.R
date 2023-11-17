@@ -12,7 +12,7 @@ dataImport = function(tag){
   A = read.csv(paste("A_", tag, ".csv", sep = ""), header = FALSE)
   Z = read.csv(paste("Z_", tag, ".csv", sep = ""), header = FALSE)
   Y = read.csv(paste("Y_", tag, ".csv", sep = ""), header = FALSE)
-  
+  c 
   df = Z
   df$A = A$V1
   df$Y = Y$V1
@@ -41,14 +41,15 @@ match = c()
 linear = c()
 
 
-dataGen(1, 6, 2, 1, 500, -.3, c(.2, -.1, .6, .4, -.7, .9), 0, c(.64), c(.7), .6, c(.8), c(-.4), "1Dc")
+tag = "1Dc"
+dataGen(1, 3, 1, .5, 10000, -.3, c(.2, -.1, .6), 0, c(1), c(.9), .6, c(.8), c(-.2), tag)
 # betas
 # dataGen(2,6,2,.5,500,.3,c(.5,.25, .3, -.1, -.2, .4),2, matrix(c(1,-.5,-.5,1), nrow = 2, byrow = TRUE), c(.7,.3),2,c(4,1), c(1,2),"2D")
 
 
 for (i in 1:100){
   print(i)
-  tag = "1Dc"
+
   azGen(tag)
   k=1
   p=6
@@ -88,7 +89,19 @@ for (i in 1:100){
   
   params = fitUZA(model, rawData, k, p)
 
+  # load(paste("param_", tag, ".RData", sep = ""))
+  # params = list(
+  #   lambda.est = lambda,
+  #   psi.est = psi,
+  #   sigma.est = H_covar,
+  #   b.est = B,
+  #   nu.est = Z_intercept,
+  #   c.est = A_intercept
+  # )
   expected.df = fitExpectations(params, rawData, k, p, 1)
+  
+  AZ = subset(rawData, select = -c(Y))
+  Z = subset(AZ, select = -c(A))
   
   yModel = '
   Y ~ .*.
@@ -101,14 +114,16 @@ for (i in 1:100){
   latent.errors[i] = abs(ATEest-ATE.true)
 }
 
-errs.df = data.frame(latent.est, latent.errors, IPW.est, IPW.errors, linear, match, nieve)
-errs.df
-write.table(errs.df, file = paste("errors.csv", sep = ""), sep = ",")
-hist(latent.errors-IPW.errors)
-hist(latent.est)
-hist(IPW.est)
-mean(latent.errors)
-mean(IPW.errors)
+
+errs.df = data.frame(errors, IPW, linear, match, nieve)
+write.table(errs.df, file = paste("errors_", tag, ".csv", sep = ""), sep = ",")
+hist(errors-IPW)
+
+mean(errors)
+mean(IPW)
 mean(linear)
 mean(match)
 mean(nieve)
+
+plot(errs.df)
+hist(errors - IPW)
