@@ -32,6 +32,10 @@ CATE.errors = function(df, params, betas, tag){
   return(errors)
 }
 
+tag = "1DsampSize"
+savemarker = 50
+
+for (sampleSize in c(1000,2000,3000,4000,5000)){
 latent.errors = c()
 latent.est = c()
 nieve = c()
@@ -39,20 +43,18 @@ IPW.est = c()
 IPW.errors = c()
 match = c()
 linear = c()
-
-
-tag = "1Dc"
-dataGen(1, 3, 1, .5, 10000, -.3, c(.2, -.1, .6), 0, c(1), c(.9), .6, c(.8), c(-.2), tag)
+# 2Da run of 50 trials with 1000 samples in 2D and ours majorly beats IPW
+#dataGen(1, 3, 3, .5,1000, -.3, c(.2, -.1, .6), 0, c(1), c(.9), .6, c(.8), c(-.2), tag)
 # betas
-# dataGen(2,6,2,.5,500,.3,c(.5,.25, .3, -.1, -.2, .4),2, matrix(c(1,-.5,-.5,1), nrow = 2, byrow = TRUE), c(.7,.3),2,c(4,1), c(1,2),"2D")
+#dataGen(2,6,2,.5,1000,.3,c(.5,.25, .3, -.1, -.2, .4),2, matrix(c(1,-.5,-.5,1), nrow = 2, byrow = TRUE), c(.9,-.7),.8,c(.6,.5), c(.4,.2),tag)
 
+for (j in 1:200){
+  print(j)
+  i = j %% savemarker + 1
 
-for (i in 1:100){
-  print(i)
-
-  azGen(tag)
+  azGen(tag, sampleSize)
   k=1
-  p=6
+  p=3
   
   rawData = dataImport(tag)
   
@@ -68,6 +70,8 @@ for (i in 1:100){
   matching.ATE = matchingEst(rawData)
   match[i] = abs(ATE.true - matching.ATE)
   
+  
+  
   model = '
   efa("efa1")*h1 + efa("efa1")*h2 =~ V1+V2+V3+V4+V5+V6
   A ~ h1 + h2
@@ -77,9 +81,8 @@ for (i in 1:100){
   h1 ~ 0*1
   h2 ~ 0*1
   '
-  
   model <- '
-  efa("efa1")*h1 =~ V1+V2+V3+V4+V5+V6
+  efa("efa1")*h1 =~ V1+V2+V3
   A ~ h1
   A | 0*t1
   A ~ 1
@@ -112,18 +115,33 @@ for (i in 1:100){
   ATEest = ATE.est(expected.df, params, betas)
   latent.est[i] = ATEest
   latent.errors[i] = abs(ATEest-ATE.true)
+  
+  if (j %% savemarker == 0){
+    errs.df = data.frame(latent.est, latent.errors, IPW.est, IPW.errors, linear, match, nieve)
+    write.table(errs.df, paste("errors_", tag, as.character(sampleSize), ".csv", sep = ""), sep = ",", append=TRUE,col.names=FALSE, row.names=FALSE)
+    latent.errors = c()
+    latent.est = c()
+    nieve = c()
+    IPW.est = c()
+    IPW.errors = c()
+    match = c()
+    linear = c()
+  }
+}
 }
 
+hist(latent.errors-IPW.errors)
 
-errs.df = data.frame(errors, IPW, linear, match, nieve)
-write.table(errs.df, file = paste("errors_", tag, ".csv", sep = ""), sep = ",")
-hist(errors-IPW)
 
-mean(errors)
-mean(IPW)
+mean(latent.errors)
+mean(IPW.errors)
 mean(linear)
 mean(match)
 mean(nieve)
 
 plot(errs.df)
-hist(errors - IPW)
+hist(latent.est)
+hist(IPW.est)
+hist(latent.errors - IPW.errors)
+length(latent.errors)
+length(IPW.errors)

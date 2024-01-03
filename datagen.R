@@ -58,16 +58,16 @@ sigmaSim = function(k, p, communality){
   return(list(sigma, lambda, psi))
 }
 
-saveParams = function(k, p, communality, var_Y, n, A_intercept, Z_intercept, Y_intercept, H_covar, B, C0, C1, C2, tag){
+saveParams = function(k, p, communality, var_Y, A_intercept, Z_intercept, Y_intercept, H_covar, B, C0, C1, C2, tag){
   
   output = sigmaSim(k, p, communality)
   sigma = output[[1]]
   lambda = output[[2]]
   psi = output[[3]]
-  save(k, p, communality, var_Y, n, sigma, lambda, psi, H_covar, B, C0, C1, C2, A_intercept, Z_intercept, Y_intercept, file = paste("param_", tag, ".RData", sep = ""))
+  save(k, p, communality, var_Y, sigma, lambda, psi, H_covar, B, C0, C1, C2, A_intercept, Z_intercept, Y_intercept, file = paste("param_", tag, ".RData", sep = ""))
 }
 
-azGen = function(tag){
+azGen = function(tag, n){
   load(paste("param_", tag, ".RData", sep = ""))
   H_set = matrix(, nrow = n, ncol = k)
   Z_set = matrix(, nrow = n, ncol = p)
@@ -100,10 +100,10 @@ azGen = function(tag){
   write.table(A_set, file = paste("A_", tag, ".csv", sep = ""), row.names = FALSE, col.names = FALSE, sep = ",")
   write.table(Y_set, file = paste("Y_", tag, ".csv", sep = ""), row.names = FALSE, col.names = FALSE, sep = ",")
 }
-
+#dataGen(1, 3, 3, .5,1000, -.3, c(.2, -.1, .6), 0, c(1), c(.9), .6, c(.8), c(-.2), tag)
 dataGen = function(k, p, communality, var_Y, n, A_intercept, Z_intercept, Y_intercept, H_covar, B, C0, C1, C2, tag){
-  saveParams(k, p, communality, var_Y, n, A_intercept, Z_intercept, Y_intercept, H_covar, B, C0, C1, C2, tag)
-  azGen(tag)
+  saveParams(k, p, communality, var_Y, A_intercept, Z_intercept, Y_intercept, H_covar, B, C0, C1, C2, tag)
+  azGen(tag, n)
 }
 
 dataGen(2,6,2,.5,1000,.3,c(.5,.25, .3, -.1, -.2, .4),2, matrix(c(1,.5,.5,1), nrow = 2, byrow = TRUE), c(.7,.3),2,c(4,1), c(1,2),"2D")
