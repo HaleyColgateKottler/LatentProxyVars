@@ -48,7 +48,7 @@ linear = c()
 # betas
 #dataGen(2,6,2,.5,1000,.3,c(.5,.25, .3, -.1, -.2, .4),2, matrix(c(1,-.5,-.5,1), nrow = 2, byrow = TRUE), c(.9,-.7),.8,c(.6,.5), c(.4,.2),tag)
 
-for (j in 1:200){
+for (j in 1:100){
   print(j)
   i = j %% savemarker + 1
 

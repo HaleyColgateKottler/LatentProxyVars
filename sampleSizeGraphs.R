@@ -27,7 +27,7 @@ lines(sampleSizes, nieve, type = "o", col = "blue")
 lines(sampleSizes, match, type = "o", col = "orange")#, ylim=c(.07,.12), ann=FALSE)
 lines(sampleSizes, IPW.errors, type = "o", col = "green")
 lines(sampleSizes, latent.errors, type = "o", col = "magenta")
-title(main = "Average Absolute ATE Error (300 trials)", xlab = "Sample Size", ylab = "Average Error")
+title(main = "Average Absolute ATE Error (500 trials)", xlab = "Sample Size", ylab = "Average Error")
 legend("topright",c("linear", "nieve", "matching", "IPW", "latent"), title = "Estimator", lty = 1, col = c("red", "blue", "orange", "green", "magenta"))
 
 # box plots and error bars
@@ -37,6 +37,6 @@ hist(df$latent.est)
 plot(sampleSizes, match, type = "o", col = "orange", ylim=c(.07,.11), ann=FALSE)
 lines(sampleSizes, IPW.errors, type = "o", col = "green")
 lines(sampleSizes, latent.errors, type = "o", col = "magenta")
-title(main = "Average Absolute ATE Error (300 trials)", xlab = "Sample Size", ylab = "Average Error")
+title(main = "Average Absolute ATE Error (500 trials)", xlab = "Sample Size", ylab = "Average Error")
 legend("topright",c("matching", "IPW", "latent"), title = "Estimator", lty = 1, col = c("orange", "green", "magenta"))
 
