@@ -30,66 +30,75 @@ CATE.errors = function(df, params, betas, tag){
   return(errors)
 }
 
-tag = "2D"
+tag = "2D1_29"
 k=2
 p=6
 sampSize = 10000
-dataGen(2,6,2,.5,sampSize,.3,c(.5,.25, .3, -.1, -.2, .4),2, matrix(c(1,.5,.5,1), nrow = 2, byrow = TRUE), c(.7,.3),2,c(4,1), c(1,2),"2D")
+dataGen(2,6,2,.5,sampSize,.3,c(.5,.25, .3, -.1, -.2, .4),2, matrix(c(1,0,0,1), nrow = 2, byrow = TRUE), c(.7,.3),2,c(4,1), c(1,2),tag)
 
-d.ests = matrix(0,nrow = sampSize, ncol = p) 
-d.trues = matrix(0,nrow = sampSize, ncol = p)
-Md.ests = matrix(0,nrow = sampSize, ncol = k)
-Md.trues = matrix(0,nrow = sampSize, ncol = k) 
-bMdc.ests = matrix(0,nrow = sampSize, ncol = 1)
-bMdc.trues = matrix(0,nrow = sampSize, ncol = 1)
+num.trials = 500
+c.ests = matrix(0,nrow = num.trials, ncol = 1) # should be .3
+nu.ests = matrix(0,nrow=num.trials, ncol = p) # should be .5 .25 .3 -.1 -.2 .4
+m.ests = matrix(0,nrow=num.trials, ncol = k*k)
+sigma.ests = matrix(0,nrow=num.trials,ncol=k*k)
+psi.ests = matrix(0,nrow=num.trials,ncol=p*p)
+lambda.ests = matrix(0,nrow=num.trials,ncol=p*k)
+b.ests = matrix(0,nrow=num.trials, ncol = k)
 
-azGen(tag)
-rawData = dataImport(tag)
+for (i in 1:num.trials){
+  azGen(tag, sampSize)
+  rawData = dataImport(tag)
+
+  # fit first model
+  model = '
+    efa("efa1")*h1 + efa("efa1")*h2 =~ V1+V2+V3+V4+V5+V6
+    A ~ h1 + h2
+    A | 0*t1
+    A ~ 1
+    
+    h1 ~ 0*1
+    h2 ~ 0*1
+    
+    h1 ~~ 0*h2
+    '
+
+  params = fitUZA(model, rawData, k, p)
+  c.ests[i] = params$c.est
+  nu.ests[i,] = params$nu.est
+  psi.ests[i,] = params$psi.est
+  lambda.ests[i,] = params$lambda.est
+  b.ests[i,] = params$b.est
+  
+  sigma.ests[i,] = params$sigma.est
+  m.ests[i,] = t(params$lambda.est) %*% solve(params$psi.est) %*% params$lambda.est + solve(params$sigma.est)
+}
+
 load(paste("param_", tag, ".RData", sep = ""))
-  
-# fit first model
-model = '
-  efa("efa1")*h1 + efa("efa1")*h2 =~ V1+V2+V3+V4+V5+V6
-  A ~ h1 + h2
-  A | 0*t1
-  A ~ 1
-  
-  h1 ~ 0*1
-  h2 ~ 0*1
-  '
-params = fitUZA(model, rawData, k, p)
+
+hist(c.ests)
+mean(c.ests)
+nu.errs = apply(nu.ests - Z_intercept, 1, mean)
+hist(nu.errs)
+mean(nu.errs) 
+
+errs = t(apply(sigma.ests, 1, function(row) row - as.vector(H_covar)))
+colMeans(errs)
+hist(sigma.ests[,1], breaks=c(0,.5,1.1))
+hist(sigma.ests[,2])
+hist(sigma.ests[,4])
 
 # compute M true and M est
 M.true = t(lambda)%*%solve(psi)%*%lambda + solve(H_covar)
-Minv = solve(M.true)
+m.errs = t(apply(m.ests, 1, function(row) row - M.true))
+colMeans(m.errs)
+colMeans(m.ests)
 
-M.est = t(params$lambda.est) %*% solve(params$psi.est) %*% params$lambda.est + solve(params$sigma.est)
-M.inv.est = solve(M.est)
+b.errs = t(apply(b.ests, 1, function(row) row - as.vector(B)))
+hist(b.errs[,1])
+hist(b.errs[,2])
 
-Z = subset(rawData, select = -c(Y,A))
-for (i in 1:length(rawData$A)){
-  z = Z[i,]
-  
-  # compute true denominator
-  d.true = t(lambda) %*% solve(psi) %*% (t(z-Z_intercept))
+psi.errs = t(apply(psi.ests, 1, function(row) row - as.vector(psi)))
+colMeans(psi.errs)
 
-  # compute est denominator
-  d.est = t(params$lambda.est) %*% solve(params$psi.est) %*% (t(z - params$nu.est))
-  
-  
-  d.ests[i,] = d.est 
-  d.trues[i,] = d.true
-  Md.ests[i,] = M.inv.est%*%d.est
-  Md.trues[i,] = Minv%*%d.true 
-  bMdc.ests[i] = t(params$b.est)%*%M.inv.est%*%d.est + params$c.est
-  bMdc.trues[i] = t(B)%*%Minv%*%d.true + A_intercept
-}
-
-bMb1error = abs(t(B)%*%Minv%*%B+1 - (t(params$b.est)%*%M.inv.est%*%params$b.est+1))
-Merror = norm(Minv - M.inv.est)
-mseD = mean((d.trues - d.ests)^2)
-mseMD = mean((Md.trues - Md.ests)^2)
-msebMdc = mean((bMdc.trues - bMdc.ests)^2)
-
-plot(d.trues[,2], abs(d.ests[,2]-d.trues[,2]))
-plot(d.trues[,2], d.ests[,2])
+lambda.errs = t(apply(lambda.ests, 1, function(row) row - as.vector(lambda)))
+colMeans(lambda.errs)

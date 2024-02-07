@@ -2,7 +2,7 @@ fitUZA = function(model, df, k, p){
   smallerDF = subset(df, select = -c(Y))
   smallerDF$A = ordered(smallerDF$A, levels = c(0,1))
   
-  fit <- sem(model, data=smallerDF, ordered = "A")
+  fit <- sem(model, data=smallerDF, ordered = "A", fixed.x = c(h1 ~~ 0*h2), rotation = "varimax")
   
   parameters = list(
     lambda.est = inspect(fit,what="est")$lambda[1:p,1:k],
