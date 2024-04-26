@@ -14,6 +14,8 @@ linear.conf = c()
 sampleSizes = c(1000,2000,3000,4000,5000)
 num.trials = c()
 
+
+
 for (sampleSize in sampleSizes){
   tag = paste("1DsampSize",sampleSize,sep="")
   df = read.csv(paste("errors_", tag, ".csv", sep = ""), header=FALSE, col.names = c("latent", "IPW", "linear", "match", "nieve"))

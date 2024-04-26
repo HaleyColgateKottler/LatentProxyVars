@@ -85,7 +85,7 @@ errs = t(apply(sigma.ests, 1, function(row) row - as.vector(H_covar)))
 colMeans(errs)
 hist(sigma.ests[,1], breaks=c(0,.5,1.1))
 hist(sigma.ests[,2])
-hist(sigma.ests[,4])
+hist(sigma.ests[,4], breaks=c(0,.5,1.1))
 
 # compute M true and M est
 M.true = t(lambda)%*%solve(psi)%*%lambda + solve(H_covar)
