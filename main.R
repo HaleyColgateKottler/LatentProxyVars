@@ -4,10 +4,10 @@ library(mvtnorm)
 library(dplyr)
 library(reshape2)
 library(ggplot2)
-source("datagen2.R")
+source("datagen.R")
 source("computeTrue.R")
-source("comparisonMethods2.R")
-source("latentMethod2.R")
+source("comparisonMethods.R")
+source("latentMethod.R")
 
 data.import <- function(tag, n) {
   A <- read.csv(
@@ -37,13 +37,14 @@ data.import <- function(tag, n) {
   return(df)
 }
 
-tag <- "2Db"
+tag <- "1D"
 savemarker <- 100
-k <- 2
-p <- 6
+k <- 1
+p <- 9
 
-dataGen(k, p, 1, .5, 1000, .3, c(.5,.25, .3, -.1, -.2, .4),
-matrix(c(1,0,0,1), nrow = 2, byrow = TRUE), c(.1, -.6, .4), c(.5, 0, 0), tag)
+dataGen(k, p, 1, .25, 1000, .3, c(.5,.25, .3, -.1, -.2, .4, .7, .8, -.6),
+1, c(.8, -.7),
+  c(.5, .6), tag)
 
 for (sample.size in 0:4) {
   sample.size <- 200 + 200 * sample.size
@@ -58,20 +59,20 @@ for (sample.size in 0:4) {
   for (j in 1:100) {
     i <- j %% savemarker + 1
 
-    azGen("2D", sample.size)
+    azGen(tag, sample.size)
 
-    raw.data <- data.import("2D", sample.size)
+    raw.data <- data.import(tag, sample.size)
 
     ate.true <- .5
 
     linear.ate <- linearEst(raw.data)
     linear[i] <- linear.ate
-    ipw.ate <- IPWest(raw.data)
+    ipw.ate <- continuousIPWest(raw.data)
     ipw[i] <- ipw.ate
     iv.ate <- IVest(raw.data)
     iv[i] <- iv.ate
 
-    ate.est <- latent.ATE(raw.data, k, p)
+    ate.est <- latent.ATE(raw.data, p)
     latent[i] <- ate.est
 
     if (j %% savemarker == 0) {
@@ -151,7 +152,7 @@ ggplot(mean.ests) +
   geom_hline(yintercept = 0.5) +
   annotate("text", x = 215, y = .51, label = "True ATE") +
   xlab("Sample Size") +
-  ylab("Average ATE Estimate")
+  ylab("Average ATE Estimate") + facet_wrap(Type ~., scales = 'free')
 ggsave(file.path("Data", "Figures", paste("Errs_by_sample_size_",
          tag, ".png",
          sep = ""

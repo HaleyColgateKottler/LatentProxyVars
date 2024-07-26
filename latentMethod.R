@@ -1,13 +1,39 @@
-fitUZA <- function(model, df, k, p) {
+fitUZA <- function(df, k.vals, p) {
   smallerDF <- subset(df, select = -c(Y))
+  z.vars <- names(smallerDF)[grep("^V", names(smallerDF))]
   
-  fit <- sem(model, data = smallerDF, rotation = "varimax")
+  fits <- c()
+  AICs <- c()
+  k.keeps <- c()
+  for (k in k.vals){
+    h.vars <- paste0("efa('efa1')*h", 1:k)
+    
+    model <- paste(
+      paste(h.vars, collapse = " + "),
+      " =~ ",
+      paste(z.vars, collapse = " + "),
+      "+ A
+                ",
+      paste0("h", 1:k, sep = "", collapse = "~ 0*1\n"),
+      "~0*1"
+    )
+    
+    fit <- sem(model, data = smallerDF, rotation = "varimax")
+    if (inspect(fit, "converged")){
+      fits <- c(fits, fit)
+      AICs <- c(AICs, AIC(fit))
+      k.keeps <- c(k.keeps, k)
+    }
+  }
+
+  fit = fits[[which(AICs == min(AICs))]]
   
   parameters <- list(
     lambda.est = inspect(fit, what = "est")$lambda,
     psi.est = inspect(fit, what = "est")$theta,
     sigma.est = inspect(fit, what = "est")$psi,
-    nu.est = inspect(fit, what = "est")$nu
+    nu.est = inspect(fit, what = "est")$nu,
+    k = k.keeps[which(AICs == min(AICs))]
   )
   return(parameters)
 }
@@ -18,7 +44,7 @@ fitExpectations <- function(params, df) {
     solve(params$psi.est, za.vec - params$nu.est)
   }))
   psi.inv.lambda <- solve(params$psi.est, params$lambda.est)
-  k <- ncol(params$lambda.est)
+  k <- params$k
   getM <- function(psi.inv.za) {
     solve(t(params$lambda.est) %*% psi.inv.lambda + diag(k), t(params$lambda.est) %*% psi.inv.za)
   }
@@ -53,7 +79,7 @@ fitMeanModel <- function(model, reg.df) {
 
 linearCATE <- function(z, betas, params, a1, a2) {
   p <- length(z)
-  k <- ncol(params$lambda.est)
+  k <- params$k
   
   z.vars <- paste0("V", 1:p)
   M.vars <- paste0("M", 1:k)
@@ -79,26 +105,15 @@ ATE.est <- function(Z, params, coefs, method = linearCATE) {
 }
 
 
-latent.ATE <- function(rawData, k, p) {
-  z.vars <- names(rawData)[grep("^V", names(rawData))]
-  h.vars <- paste0("efa('efa1')*h", 1:k)
-  
-  model <- paste(
-    paste(h.vars, collapse = " + "),
-    " =~ ",
-    paste(z.vars, collapse = " + "),
-    "+ A
-                ",
-    paste0("h", 1:k, sep = "", collapse = "~ 0*1\n"),
-    "~0*1"
-  )
-  
-  params <- fitUZA(model, rawData, k, p)
-  
-  M <- fitExpectations(params, rawData)
-  
+latent.ATE <- function(rawData, kvals, p) {
   AZ <- subset(rawData, select = -c(Y))
   Z <- subset(AZ, select = -c(A))
+  Z.dimension <- ncol(Z)
+
+  params <- fitUZA(rawData, kvals, p)
+  k = params$k
+  
+  M <- fitExpectations(params, rawData)
   
   if (k > 1) {
     M.df <- t(M)
@@ -116,7 +131,17 @@ latent.ATE <- function(rawData, k, p) {
     "+ A"
   )
   betas <- fitMeanModel(yModel, rawData)
+  
   ATEest <- ATE.est(Z, params, betas)
+  
+  EM_output = list("nu" = params$nu.est,
+                   "lambda" = params$lambda.est,
+                   "psi" = params$psi.est,
+                   "alpha" = betas[c('(Intercept)', M.vars)],
+                   "gamma" = betas[!(names(betas) %in% c('(Intercept)', M.vars))],
+                   "beta" = ATEest)
+  se.est = calcSE(rawData, p, k, EM_output, 1)
+  return(list("estimate" = ATEest, "se" = se.est))
 }
 
 latent.ATE.NCE <- function(rawData, k, p) {
