@@ -1,11 +1,11 @@
-fitUZA <- function(df, k.vals, p) {
+fitUZA <- function(df, kvals, p) {
   smallerDF <- subset(df, select = -c(Y))
   z.vars <- names(smallerDF)[grep("^V", names(smallerDF))]
   
   fits <- c()
   AICs <- c()
   k.keeps <- c()
-  for (k in k.vals){
+  for (k in kvals){
     h.vars <- paste0("efa('efa1')*h", 1:k)
     
     model <- paste(
@@ -53,24 +53,6 @@ fitExpectations <- function(params, df) {
   return(M)
 }
 
-fitExpectationsNCE <- function(params, df) {
-  ZA <- subset(df, select = -c(Y))
-  psi.inv.centered <- t(apply(ZA, 1, function(za.vec) {
-    solve(params$psi.est, za.vec - params$nu.est)
-  }))
-  psi.inv.lambda <- solve(params$psi.est, params$lambda.est)
-  k <- ncol(params$lambda.est)
-  getM <- function(psi.inv.za) {
-    solve(t(params$lambda.est) %*% psi.inv.lambda + diag(k), t(params$lambda.est) %*% psi.inv.za)
-  }
-  
-  M <- apply(psi.inv.centered, 1, getM)
-  return(M)
-}
-
-
-# regress Y onto tau (lambda'Z + gamma A)9
-
 fitMeanModel <- function(model, reg.df) {
   reg <- lm(model, reg.df)
   betas <- coef(reg)
@@ -105,84 +87,45 @@ ATE.est <- function(Z, params, coefs, method = linearCATE) {
 }
 
 
-latent.ATE <- function(rawData, kvals, p) {
-  AZ <- subset(rawData, select = -c(Y))
+latent.ATE <- function(raw.data, kvals, p) {
+  AZ <- subset(raw.data, select = -c(Y))
   Z <- subset(AZ, select = -c(A))
   Z.dimension <- ncol(Z)
 
-  params <- fitUZA(rawData, kvals, p)
-  k = params$k
-  
-  M <- fitExpectations(params, rawData)
-  
-  if (k > 1) {
-    M.df <- t(M)
+  params <- fitUZA(raw.data, kvals, p)
+  if (!is.null(params)){
+    k = params$k
+    
+    M <- fitExpectations(params, raw.data)
+    
+    if (k > 1) {
+      M.df <- t(M)
+    } else {
+      M.df <- M
+    }
+    prior.names <- colnames(raw.data)
+    M.vars <- paste0("M", 1:k)
+    raw.data <- cbind(raw.data, M.df)
+    colnames(raw.data) <- c(prior.names, M.vars)
+    yModel <- paste(
+      "Y ~",
+      paste(M.vars, collapse = " + "),
+      "+", paste0(M.vars, "*A", collapse = " + "),
+      "+ A"
+    )
+    betas <- fitMeanModel(yModel, raw.data)
+    
+    ATEest <- ATE.est(Z, params, betas)
+    
+    EM_output = list("nu" = params$nu.est,
+                     "lambda" = params$lambda.est,
+                     "psi" = params$psi.est,
+                     "alpha" = betas[c('(Intercept)', M.vars)],
+                     "gamma" = betas[!(names(betas) %in% c('(Intercept)', M.vars))],
+                     "beta" = ATEest)
+    se.est = calcSE(raw.data, p, k, EM_output, 1)
+    return(list("estimate" = ATEest, "se" = se.est))
   } else {
-    M.df <- M
+    return(NULL)
   }
-  prior.names <- colnames(rawData)
-  M.vars <- paste0("M", 1:k)
-  rawData <- cbind(rawData, M.df)
-  colnames(rawData) <- c(prior.names, M.vars)
-  yModel <- paste(
-    "Y ~",
-    paste(M.vars, collapse = " + "),
-    "+", paste0(M.vars, "*A", collapse = " + "),
-    "+ A"
-  )
-  betas <- fitMeanModel(yModel, rawData)
-  
-  ATEest <- ATE.est(Z, params, betas)
-  
-  EM_output = list("nu" = params$nu.est,
-                   "lambda" = params$lambda.est,
-                   "psi" = params$psi.est,
-                   "alpha" = betas[c('(Intercept)', M.vars)],
-                   "gamma" = betas[!(names(betas) %in% c('(Intercept)', M.vars))],
-                   "beta" = ATEest)
-  se.est = calcSE(rawData, p, k, EM_output, 1)
-  return(list("estimate" = ATEest, "se" = se.est))
-}
-
-latent.ATE.NCE <- function(rawData, k, p) {
-  z.vars <- names(rawData)[grep("^V", names(rawData))]
-  h.vars <- paste0("efa('efa1')*h", 1:k)
-  
-  model <- paste(
-    paste(h.vars, collapse = " + "),
-    " =~ ",
-    paste(z.vars, collapse = " + "),
-    "+ A
-                ",
-    "A ~", paste(z.vars, collapse = " + "),
-    "
-                ",
-    paste0("h", 1:k, sep = "", collapse = "~ 0*1\n"),
-    "~0*1"
-  )
-  
-  params <- fitUZA(model, rawData, k, p)
-  
-  M <- fitExpectationsNCE(params, rawData)
-  
-  AZ <- subset(rawData, select = -c(Y))
-  Z <- subset(AZ, select = -c(A))
-  
-  if (k > 1) {
-    M.df <- t(M)
-  } else {
-    M.df <- M
-  }
-  prior.names <- colnames(rawData)
-  M.vars <- paste0("M", 1:k)
-  rawData <- cbind(rawData, M.df)
-  colnames(rawData) <- c(prior.names, M.vars)
-  yModel <- paste(
-    "Y ~",
-    paste(M.vars, collapse = " + "),
-    "+", paste0(M.vars, "*A", collapse = " + "),
-    "+ A"
-  )
-  betas <- fitMeanModel(yModel, rawData)
-  ATEest <- ATE.est(Z, params, betas)
 }

@@ -111,3 +111,14 @@ matchingBinaryEst <- function(df) {
   
   return(matching.ATE)
 }
+
+control <- function(df){
+  Z.names <- colnames(df)[!(colnames(df) %in% c('A', 'Y'))]
+  ests <- c()
+  for (z.name in Z.names){
+    mod <- lm(paste(z.name, " ~ Y + A", sep = ""), df)
+    ate.est <- -mod$coefficients['A']/mod$coefficients['Y']
+    ests <- c(ests, ate.est)
+  }
+  return(mean(ests))
+}

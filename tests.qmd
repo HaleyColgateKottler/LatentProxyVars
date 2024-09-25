@@ -1,0 +1,189 @@
+---
+title: "Tests"
+format: pdf
+editor: source
+execute: 
+  echo: false
+  warning: false
+---
+
+```{r}
+library(lavaan)
+library(cubature)
+library(mvtnorm)
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+source("datagen.R")
+source("computeTrue.R")
+source("comparisonMethods.R")
+source("latentMethod.R")
+source("se.R")
+source(file.path("tests", "consistency.R"))
+source(file.path("tests", "IV.R"))
+source(file.path("tests", "skew.R"))
+source(file.path("tests", "binary.R"))
+source(file.path("tests", "noLatent.R"))
+source(file.path("tests", "higherY.R"))
+source(file.path("tests", "UZUAUY.R"))
+```
+
+```{r}
+data.import <- function(tag, n) {
+  A <- read.csv(
+    file.path(
+      "Data", "Samples",
+      paste("A_", tag, "_", n, ".csv", sep = "")
+    ),
+    header = FALSE
+  )
+  Z <- read.csv(
+    file.path(
+      "Data", "Samples",
+      paste("Z_", tag, "_", n, ".csv", sep = "")
+    ),
+    header = FALSE
+  )
+  Y <- read.csv(
+    file.path(
+      "Data", "Samples",
+      paste("Y_", tag, "_", n, ".csv", sep = "")
+    ),
+    header = FALSE
+  )
+  df <- Z
+  df$A <- A$V1
+  df$Y <- Y$V1
+  return(df)
+}
+
+bar.plots <- function(tag, plot.title, true.val, sample.size){
+  temp.df <- read.csv(
+  file.path(
+    "Data", "Estimates",
+    paste("ests_", tag, as.character(sample.size),
+          ".csv",
+          sep = ""
+    )
+  ),
+  colClasses = "numeric"
+)
+colnames(temp.df) <- c("Latent", "Linear", "IPW", "IV")
+temp = melt(temp.df)
+colnames(temp) <- c('Method', 'estimate')
+ggplot(temp) + geom_boxplot(aes(y = estimate, x = Method)) +
+  geom_hline(yintercept = true.val, color = 'green',
+             linewidth = 2) + ylab("ATE Estimate") +
+  ggtitle(plot.title)
+ggsave(file.path("Data", "Figures", paste(tag, ".png",
+                                          sep = ""
+)))
+}
+```
+
+
+```{r}
+trials <- 1000
+sample.size <- 500
+set.seed(127)
+```
+
+## Consistency
+```{r}
+tag <- "consistency"
+k = 2
+p = 9
+sample.sizes <- seq(from = 500, to = 900, by = 200)
+
+test.consistency(tag, sample.sizes, 1:3, reps = trials)
+graph.consistency(tag, seq(from = 200, to = 1000, by = 200))
+```
+
+## UZ vs UA vs UY
+```{r}
+tag = ""
+p=9
+uzuauy_test(1:5, sample.size, trials, tag)
+load(file.path("Data", "Parameters",
+                 paste("param_zhigh_ahigh_y40", ".RData", sep = "")))
+true_ate <- gamma[1]
+graph.uzuauy(tag, sample.size)
+```
+
+## IV
+```{r}
+tag = "IV"
+k = 2
+p = 9
+
+iv_test(1:9, sample.size, trials, tag)
+load(file.path("Data", "Parameters",
+                 paste("param_", tag, ".RData", sep = "")))
+true_ate <- gamma[1]
+bar.plots(tag, "True Model: Instrument Variable", true_ate, sample.size)
+```
+
+
+## Skew Normal
+```{r}
+tag = "skew"
+k = 2
+p = 9
+
+skew_test(1:9, sample.size, trials, tag)
+load(file.path("Data", "Parameters",
+                 paste("param_", tag, ".RData", sep = "")))
+true_ate <- gamma[1]
+bar.plots(tag, "True Model: Skew Normal", true_ate, sample.size)
+```
+
+## Binary A
+```{r}
+tag <- 'binary'
+k = 2
+p = 6
+
+binary_test(1:p, sample.size, trials, tag)
+load(file.path("Data", "Parameters",
+                 paste("param_", tag, ".RData", sep = "")))
+true_ate <- gamma[1]
+bar.plots(tag, "True Model: Probit A", true_ate, sample.size)
+```
+
+## No Latent Variable
+```{r}
+tag <- 'no_latent'
+p = 6
+
+no_latent_test(1:p, sample.size, trials, tag)
+load(file.path("Data", "Parameters",
+                 paste("param_", tag, ".RData", sep = "")))
+true_ate <- gamma[1]
+bar.plots(tag, "True Model: No Latent Variable", true_ate, sample.size)
+```
+
+## Different ratios of Z to U
+```{r}
+tag <- 'ratio'
+k <- 2
+pvals <- c(2, 4, 6, 8, 10, 12, 14, 16, 18)
+
+ratio_test(1:max(pvals), pvals, sample.size, trials, tag)
+load(file.path("Data", "Parameters",
+                 paste("param_", tag, pvals[1], ".RData", sep = "")))
+true_ate <- gamma[1]
+graph.ratio(tag, pvals)
+```
+
+## Higher Order Y
+```{r}
+tag <- 'squared'
+k = 1
+p = 6
+
+squared_test(1:p, sample.size, trials, tag)
+load(file.path("Data", "Parameters",
+                 paste("param_", tag, ".RData", sep = "")))
+true_ate <- gamma[1]
+bar.plots(tag, "True Model: Probit A", true_ate, sample.size)
+```

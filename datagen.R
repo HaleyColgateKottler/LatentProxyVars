@@ -24,7 +24,7 @@ sigmaSim <- function(k, p, communality) {
   A[, k] <- (k - 1) * matrix(1, 1, p) - rowSums(A)
   
   # Add normal deviation
-  c <- .1 * sample(7:9, k)
+  c <- .1 * sample(7:9, k, replace = TRUE)
   x <- rnorm(p * k)
   x1 <- matrix(x, nrow = p)
   d <- c(matrix(1, ncol = p, nrow = 1) / wordspace::rowNorms(x1))
@@ -63,6 +63,7 @@ saveParams <- function(k, p, communality, var_Y, A_intercept, Z_intercept,
   output <- sigmaSim(k, p, communality)
   lambda <- output[[1]]
   psi <- output[[2]]
+  psi[p+1, p+1] <- 1
   
   save(k, p, communality, var_Y, lambda, psi, H_covar, alpha, gamma,
        A_intercept, Z_intercept,
@@ -100,66 +101,4 @@ azGen <- function(tag, n) {
   write.table(Z_set, file = file.path("Data", "Samples", paste("Z_", tag, "_", n, ".csv", sep = "")), row.names = FALSE, col.names = FALSE, sep = ",")
   write.table(A_set, file = file.path("Data", "Samples", paste("A_", tag, "_", n, ".csv", sep = "")), row.names = FALSE, col.names = FALSE, sep = ",")
   write.table(Y_set, file = file.path("Data", "Samples", paste("Y_", tag, "_", n, ".csv", sep = "")), row.names = FALSE, col.names = FALSE, sep = ",")
-}
-
-# dataGen(1, 3, 3, .5,1000, -.3, c(.2, -.1, .6), 0,
-# c(1), c(.9), .6, c(.8), c(-.2), tag)
-dataGen <- function(k, p, communality, var_Y, n, A_intercept, Z_intercept,
-                    H_covar, alpha, gamma, tag) {
-  saveParams(k, p, communality, var_Y, A_intercept, Z_intercept,
-             H_covar, alpha, gamma, tag)
-  azGen(tag, n)
-}
-
-# dataGen(2, 6, 2, .5, 1000, .3, c(.5,.25, .3, -.1, -.2, .4), 2,
-# matrix(c(1,.5,.5,1), nrow = 2, byrow = TRUE), 2, c(4,1), "2D")
-
-# dataGen(1, 3, 1, .25, 500, -.2, c(.2, -.1, .4), 2,
-# c(1), .5, c(-.8, .5, .3), "1Da")
-dataGenNCE <- function(k, p, communality, var_Y, n, A_intercept, Z_intercept,
-                       Y_intercept, H_covar, C0, C1, C2, tag) {
-  saveParams(k, p, communality, var_Y, A_intercept, Z_intercept, Y_intercept,
-             H_covar, C0, C1, C2, tag)
-  azGenNCE(tag, n)
-}
-
-azGenNCE <- function(tag, n) {
-  load(file.path("Data", "Parameters",
-                 paste("param_", tag, ".RData", sep = "")))
-  H_set <- matrix(, nrow = n, ncol = k)
-  Z_set <- matrix(, nrow = n, ncol = p)
-  A_set <- c()
-  Y_set <- c()
-  
-  for (i in 1:n) {
-    epsilon_AZ <- MASS::mvrnorm(n = 1, mu = rep(0, p + 1), Sigma = psi)
-    epsilon_Z <- epsilon_AZ[1:p]
-    epsilon_A <- epsilon_AZ[p + 1]
-    epsilon_Y <- rnorm(1, mean = 0, sd = sqrt(var_Y))
-    
-    H <- MASS::mvrnorm(n = 1, mu = rep(0, k), Sigma = H_covar)
-    ZA <- lambda %*% H
-    Z <- ZA[1:p, 1] + Z_intercept + epsilon_Z
-    A <- ZA[p + 1, 1] + (C2 %*% Z) + A_intercept + epsilon_A
-    Y <- (C1 %*% H) + C0 * A + Y_intercept + epsilon_Y
-    
-    H_set[i, ] <- t(H)
-    Z_set[i, ] <- Z
-    A_set[i] <- A
-    Y_set[i] <- Y
-  }
-  
-  file.tag = paste(tag, "_", n, ".csv", sep = "")
-  write.table(H_set, file = file.path("Data", "Samples",
-                                      paste("H_", file.tag, sep = "")),
-              row.names = FALSE, col.names = FALSE, sep = ",")
-  write.table(Z_set, file = file.path("Data", "Samples",
-                                      paste("Z_", file.tag, sep = "")),
-              row.names = FALSE, col.names = FALSE, sep = ",")
-  write.table(A_set, file = file.path("Data", "Samples",
-                                      paste("A_", file.tag, sep = "")),
-              row.names = FALSE, col.names = FALSE, sep = ",")
-  write.table(Y_set, file = file.path("Data", "Samples",
-                                      paste("Y_", file.tag, sep = "")),
-              row.names = FALSE, col.names = FALSE, sep = ",")
 }

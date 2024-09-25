@@ -4,39 +4,10 @@ library(mvtnorm)
 library(dplyr)
 library(reshape2)
 library(ggplot2)
-source("datagen.R")
 
-data.import <- function(tag, n) {
-  A <- read.csv(
-    file.path(
-      "Data", "Samples",
-      paste("A_", tag, "_", n, ".csv", sep = "")
-    ),
-    header = FALSE
-  )
-  Z <- read.csv(
-    file.path(
-      "Data", "Samples",
-      paste("Z_", tag, "_", n, ".csv", sep = "")
-    ),
-    header = FALSE
-  )
-  Y <- read.csv(
-    file.path(
-      "Data", "Samples",
-      paste("Y_", tag, "_", n, ".csv", sep = "")
-    ),
-    header = FALSE
-  )
-  df <- Z
-  df$A <- A$V1
-  df$Y <- Y$V1
-  return(df)
-}
-
-tag = "1D"
-p=9
-k=1
+# tag = "1D"
+# p=9
+# k=1
 
 calcCATE_SE <- function(data, constraints, output, a.dif, z){
   n = nrow(data)
@@ -199,61 +170,61 @@ calcSE <- function(data, p, k, output, a.dif){
   return(se)
 }
 
-azGen(tag, 1000)
-raw.data = data.import(tag, 1000)
-ate.est <- latent.ATE(raw.data, 1:3, p)
-load(file.path("Data", "Parameters", paste("param_", tag, ".RData", sep = "")))
-output = list("nu" = c(Z_intercept, A_intercept),
-              "lambda" = lambda,
-              "psi" = diag(psi),
-              "alpha" = alpha,
-              "gamma" = gamma,
-              "beta" = ate.est)
-
-se.est = calcSE(raw.data, p, k, output, 1)
-
-raw.data <- data.import(tag, 1000)
-se.est = calcSE(raw.data, p, k, output, 1)
-
-ests = matrix(0, nrow = 1, ncol = 100)
-se.ests = matrix(0, nrow = 1, ncol = 100)
-
-for (sample.size in 1:1){
-  print(sample.size)
-  for (trial.num in 1:100){
-    print(trial.num)
-    azGen(tag, sample.size * 1000)
-    raw.data = data.import(tag, sample.size * 1000)
-    ate.est <- latent.ATE(raw.data, 1:3, p)
-    se.ests[sample.size,trial.num] = ate.est$se[35]
-    ests[sample.size,trial.num] = ate.est$estimate
-  }
-}
-
-samp.df <- data.frame('estimates' = ests[1,],
-                      'se' = se.ests[1,],
-                      'lowerCI' = 0,
-                      'upperCI' = 0,
-                      'cover' = 0)
-covered <- 0
-for (i in 1:100){
-  if (!(is.na(ests[1,i]) | is.na(se.ests[1,i]))){
-    lower.ci <- ests[1,i] - 1*se.ests[1,i]
-    upper.ci <- ests[1,i] + 1*se.ests[1,i]
-    samp.df[i,'lowerCI'] <- lower.ci
-    samp.df[i,'upperCI'] <- upper.ci
-    if (lower.ci < .5 && upper.ci > .5){
-      covered <- covered + 1
-      samp.df[i,'cover'] <- 1
-    }
-  }
-}
-samp.df$cover <- factor(samp.df$cover)
-
-write.csv(samp.df, paste("coverage_test_", tag, ".csv", sep = ""))
-
-ggplot(samp.df) + geom_hline(yintercept = .5) +
-  geom_point(aes(x=1:100, y = estimates, color = cover)) +
-  geom_errorbar(aes(x = 1:100, ymin = lowerCI, ymax = upperCI,
-                    color = cover))
-ggsave(paste("coverage_plot_", tag, ".png", sep = ""))
+# azGen(tag, 1000)
+# raw.data = data.import(tag, 1000)
+# ate.est <- latent.ATE(raw.data, 1:3, p)
+# load(file.path("Data", "Parameters", paste("param_", tag, ".RData", sep = "")))
+# output = list("nu" = c(Z_intercept, A_intercept),
+#               "lambda" = lambda,
+#               "psi" = diag(psi),
+#               "alpha" = alpha,
+#               "gamma" = gamma,
+#               "beta" = ate.est)
+# 
+# se.est = calcSE(raw.data, p, k, output, 1)
+# 
+# raw.data <- data.import(tag, 1000)
+# se.est = calcSE(raw.data, p, k, output, 1)
+# 
+# ests = matrix(0, nrow = 1, ncol = 100)
+# se.ests = matrix(0, nrow = 1, ncol = 100)
+# 
+# for (sample.size in 1:1){
+#   print(sample.size)
+#   for (trial.num in 1:100){
+#     print(trial.num)
+#     azGen(tag, sample.size * 1000)
+#     raw.data = data.import(tag, sample.size * 1000)
+#     ate.est <- latent.ATE(raw.data, 1:3, p)
+#     se.ests[sample.size,trial.num] = ate.est$se[35]
+#     ests[sample.size,trial.num] = ate.est$estimate
+#   }
+# }
+# 
+# samp.df <- data.frame('estimates' = ests[1,],
+#                       'se' = se.ests[1,],
+#                       'lowerCI' = 0,
+#                       'upperCI' = 0,
+#                       'cover' = 0)
+# covered <- 0
+# for (i in 1:100){
+#   if (!(is.na(ests[1,i]) | is.na(se.ests[1,i]))){
+#     lower.ci <- ests[1,i] - 1*se.ests[1,i]
+#     upper.ci <- ests[1,i] + 1*se.ests[1,i]
+#     samp.df[i,'lowerCI'] <- lower.ci
+#     samp.df[i,'upperCI'] <- upper.ci
+#     if (lower.ci < .5 && upper.ci > .5){
+#       covered <- covered + 1
+#       samp.df[i,'cover'] <- 1
+#     }
+#   }
+# }
+# samp.df$cover <- factor(samp.df$cover)
+# 
+# write.csv(samp.df, paste("coverage_test_", tag, ".csv", sep = ""))
+# 
+# ggplot(samp.df) + geom_hline(yintercept = .5) +
+#   geom_point(aes(x=1:100, y = estimates, color = cover)) +
+#   geom_errorbar(aes(x = 1:100, ymin = lowerCI, ymax = upperCI,
+#                     color = cover))
+# ggsave(paste("coverage_plot_", tag, ".png", sep = ""))
