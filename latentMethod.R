@@ -1,3 +1,4 @@
+source('newSEM.R')
 fitUZA <- function(df, kvals, p) {
   smallerDF <- subset(df, select = -c(Y))
   z.vars <- names(smallerDF)[grep("^V", names(smallerDF))]
@@ -18,7 +19,14 @@ fitUZA <- function(df, kvals, p) {
       "~0*1"
     )
     
-    fit <- sem(model, data = smallerDF, rotation = "varimax")
+    fit <- tryCatch(
+      {
+        sem(model, data = smallerDF, rotation = "varimax")
+      },
+      error = function(e){
+        new_NullSEM(0)
+      }
+    )
     if (inspect(fit, "converged")){
       fits <- c(fits, fit)
       AICs <- c(AICs, AIC(fit))
@@ -123,8 +131,8 @@ latent.ATE <- function(raw.data, kvals, p) {
                      "alpha" = betas[c('(Intercept)', M.vars)],
                      "gamma" = betas[!(names(betas) %in% c('(Intercept)', M.vars))],
                      "beta" = ATEest)
-    se.est = calcSE(raw.data, p, k, EM_output, 1)
-    return(list("estimate" = ATEest, "se" = se.est))
+    # se.est = calcSE(raw.data, p, k, EM_output, 1)
+    return(list("estimate" = ATEest))
   } else {
     return(NULL)
   }

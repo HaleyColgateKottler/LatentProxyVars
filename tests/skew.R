@@ -61,7 +61,7 @@ skew_test <- function(kvals, sample.size, reps, tag, savemarker = 100){
       write.table(est.df,
                   file.path(
                     "Data", "Estimates",
-                    paste(tag, as.character(sample.size),
+                    paste("ests_", tag, as.character(sample.size),
                           ".csv",
                           sep = ""
                     )

@@ -1,16 +1,16 @@
-squared_param_gen <- function(k, p, alpha, gamma, zeta, tag){
+squared_param_gen <- function(k, p, alpha, gamma, tag){
   factor.loadings <- sigmaSim(k, p, 1)
   lambda <- factor.loadings[[1]]
   psi <- factor.loadings[[2]]
   
   var_Y <- .1
   
-  save(k, p, var_Y, lambda, alpha, gamma, zeta,
+  save(k, p, var_Y, lambda, psi, alpha, gamma,
        file = file.path("Data", "Parameters",
                         paste("param_", tag,
                               ".RData", sep = "")))
 }
-
+# squared_param_gen(k, p, alpha, c(gamma[1:2], -.8), tag)
 squared_az_gen <- function(tag, sample.size){
   load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
@@ -25,7 +25,7 @@ squared_az_gen <- function(tag, sample.size){
     ZA <- lambda %*% H
     Z <- ZA[1:p, 1] + epsilon_Z
     A <- ZA[p + 1, 1] + epsilon_A
-    Y <- (alpha + A*gamma) %*% c(1, H) + zeta %*% H^2  + epsilon_Y
+    Y <- (alpha + A*gamma) %*% c(1, H, H^2)  + epsilon_Y
     
     df[samp,] <- c(H, Z, A, Y)
   }
