@@ -19,4 +19,5 @@ project_dir <- getwd()
 # Run lintr and styler on the project directory
 lint_dir(project_dir)
 style_dir(project_dir)
+style_dir('tests')
 lint("main.R")

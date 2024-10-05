@@ -42,9 +42,11 @@ savemarker <- 100
 k <- 1
 p <- 9
 
-dataGen(k, p, 1, .25, 1000, .3, c(.5,.25, .3, -.1, -.2, .4, .7, .8, -.6),
-1, c(.8, -.7),
-  c(.5, .6), tag)
+dataGen(
+  k, p, 1, .25, 1000, .3, c(.5, .25, .3, -.1, -.2, .4, .7, .8, -.6),
+  1, c(.8, -.7),
+  c(.5, .6), tag
+)
 
 for (sample.size in 0:4) {
   sample.size <- 200 + 200 * sample.size
@@ -152,8 +154,9 @@ ggplot(mean.ests) +
   geom_hline(yintercept = 0.5) +
   annotate("text", x = 215, y = .51, label = "True ATE") +
   xlab("Sample Size") +
-  ylab("Average ATE Estimate") + facet_wrap(Type ~., scales = 'free')
+  ylab("Average ATE Estimate") +
+  facet_wrap(Type ~ ., scales = "free")
 ggsave(file.path("Data", "Figures", paste("Errs_by_sample_size_",
-         tag, ".png",
-         sep = ""
-       )))
+  tag, ".png",
+  sep = ""
+)))

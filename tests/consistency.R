@@ -1,4 +1,4 @@
-test.consistency <- function(tag, sample.sizes, kvals, savemarker = 100, reps = 100){
+test.consistency <- function(tag, sample.sizes, kvals, savemarker = 100, reps = 100) {
   indexing <- 0
   for (sample.size in sample.sizes) {
     indexing <- indexing + 1
@@ -8,38 +8,38 @@ test.consistency <- function(tag, sample.sizes, kvals, savemarker = 100, reps = 
     ipw <- c()
     linear <- c()
     iv <- c()
-    
+
     for (j in 1:reps) {
       i <- j %% savemarker
-      
+
       azGen(tag, sample.size)
-      
+
       raw.data <- data.import(tag, sample.size)
-      
+
       linear.ate <- linearEst(raw.data)
       linear[i] <- linear.ate
       ipw.ate <- continuousIPWest(raw.data)
       ipw[i] <- ipw.ate
       iv.ate <- IVest(raw.data)
       iv[i] <- iv.ate
-      
+
       ate.est <- latent.ATE(raw.data, kvals, p)
       latent[i] <- ate.est$estimate
-      
+
       if (j %% savemarker == 0 | j == reps) {
         print(sample.size)
         print(j)
         est.df <- rbind(est.df, cbind(latent, linear, ipw, iv))
         write.table(est.df,
-                    file.path(
-                      "Data", "Estimates",
-                      paste("ests_", tag, as.character(sample.size),
-                            ".csv",
-                            sep = ""
-                      )
-                    ),
-                    sep = ",",
-                    row.names = FALSE
+          file.path(
+            "Data", "Estimates",
+            paste("ests_", tag, as.character(sample.size),
+              ".csv",
+              sep = ""
+            )
+          ),
+          sep = ",",
+          row.names = FALSE
         )
         latent <- c()
         ipw <- c()
@@ -50,7 +50,7 @@ test.consistency <- function(tag, sample.sizes, kvals, savemarker = 100, reps = 
   }
 }
 
-graph.consistency <- function(tag, sample.sizes){
+graph.consistency <- function(tag, sample.sizes) {
   mean.ests <- data.frame(matrix(nrow = 0, ncol = 5))
   j <- 0
   for (samp.size in sample.sizes) {
@@ -59,8 +59,8 @@ graph.consistency <- function(tag, sample.sizes){
       file.path(
         "Data", "Estimates",
         paste("ests_", tag, as.character(samp.size),
-              ".csv",
-              sep = ""
+          ".csv",
+          sep = ""
         )
       ),
       colClasses = "numeric"
@@ -82,17 +82,19 @@ graph.consistency <- function(tag, sample.sizes){
       quantile(temp.df$iv, probs = c(.05, .95))
     )
   }
-  
+
   colnames(mean.ests) <- c("SampleSize", "Type", "Mean", "Q.05", "Q.95")
   mean.ests$Type <- factor(mean.ests$Type)
   mean.ests$SampleSize <- as.numeric(mean.ests$SampleSize)
   mean.ests$Mean <- as.numeric(mean.ests$Mean)
   mean.ests$Q.05 <- as.numeric(mean.ests$Q.05)
   mean.ests$Q.95 <- as.numeric(mean.ests$Q.95)
-  
+
   mean.ests <- mean.ests[order(mean.ests$SampleSize), ]
-  load(file.path("Data", "Parameters",
-                 paste("param_", tag, ".RData", sep = "")))
+  load(file.path(
+    "Data", "Parameters",
+    paste("param_", tag, ".RData", sep = "")
+  ))
   true_ate <- gamma[1]
   ggplot(mean.ests) +
     geom_ribbon(aes(
@@ -100,7 +102,7 @@ graph.consistency <- function(tag, sample.sizes){
       alpha = .05
     )) +
     geom_line(aes(x = SampleSize, y = Mean, group = Type, color = Type),
-              linewidth = 2
+      linewidth = 2
     ) +
     geom_point(aes(x = SampleSize, y = Mean, color = Type), size = 3) +
     geom_hline(yintercept = true_ate) +
@@ -108,7 +110,7 @@ graph.consistency <- function(tag, sample.sizes){
     xlab("Sample Size") +
     ylab("Average ATE Estimate")
   ggsave(file.path("Data", "Figures", paste("Errs_by_sample_size_",
-                                            tag, ".png",
-                                            sep = ""
+    tag, ".png",
+    sep = ""
   )))
 }
