@@ -1,3 +1,5 @@
+library(pracma)
+
 # comparison methods
 nieveBinaryEst <- function(df) {
   A1 <- which(df$A == 1)
@@ -121,4 +123,39 @@ control <- function(df) {
     ests <- c(ests, ate.est)
   }
   return(mean(ests))
+}
+
+
+proximal_causal <- function(df, nco.names, nce.names){
+  wformulas <- paste(nco.names,
+                    " ~ A + ", paste0(nce.names, sep = "", collapse = " + "),
+                    " + ", paste0("A * ", nce.names, sep = "", collapse = " + "),
+                    sep = "")
+  m.hW <- lapply(wformulas, lm, data = df)
+  
+  wav <- sapply(m.hW, predict, data = df[,c("A", "Y", nce.names)])
+  
+  prior.names <- colnames(df)
+  df <- cbind(df, wav)
+  colnames(df) <- c(prior.names, paste("wav", 1:length(nco.names), sep = ""))
+  
+  # estimate tau_a
+  m1formula <- paste("Y ~ A + ",
+                     paste0("wav", 1:length(nco.names), collapse = " + "),
+                     " + ",
+                     paste0("A * ", paste("wav", 1:length(nco.names), sep = ""),
+                            collapse = " + "),
+                     sep = "")
+  m1 <- lm(m1formula, df)
+  alpha <- m1$coefficients[c("(Intercept)", paste("wav", 1:length(nco.names), sep = ""))]
+  gamma <- m1$coefficients[c("A", paste("A:wav", 1:length(nco.names), sep = ""))]
+  
+  # calc CATE
+  mWVformula <- paste(paste0(nco.names, collapse = " + "),
+                      " ~ ", paste0(nce.names, collapse = " + "))
+  m.WV <- lm(mWVformula, df)
+  WV <- predict(m.WV, df)
+  CATE <- gamma[1] + gamma[2:4] %*% t(WV)
+  ATE <- mean(CATE)
+  return(ATE)
 }

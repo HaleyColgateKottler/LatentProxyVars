@@ -36,13 +36,14 @@ binary_az_gen <- function(tag, sample.size) {
   write.table(Y, file = file.path("Data", "Samples", paste("Y_", tag, "_", sample.size, ".csv", sep = "")), row.names = FALSE, col.names = FALSE, sep = ",")
 }
 
-binary_test <- function(kvals, sample.size, reps, tag, savemarker = 100) {
-  est.df <- data.frame(matrix(nrow = 0, ncol = 4))
-  colnames(est.df) <- c("latent", "linear", "IPW", "IV")
+binary_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
+  est.df <- data.frame(matrix(nrow = 0, ncol = 5))
+  colnames(est.df) <- c("latent", "linear", "IPW", "IV", "proximal")
   latent <- c()
   ipw <- c()
   linear <- c()
   iv <- c()
+  proximal <- c()
 
   for (j in 1:trials) {
     i <- j %% savemarker
@@ -55,6 +56,9 @@ binary_test <- function(kvals, sample.size, reps, tag, savemarker = 100) {
     ipw[i] <- ipw.ate
     iv.ate <- IVest(raw.data)
     iv[i] <- iv.ate
+    proximal.ate <- proximal_causal(raw.data, paste("V", 1:floor(p/2), sep = ""),
+                                    paste("V", (floor(p/2)+1):p, sep = ""))
+    proximal[i] <- proximal.ate
 
     ate.est <- latent.ATE(raw.data, kvals, p)
     latent[i] <- ate.est$estimate
@@ -62,7 +66,7 @@ binary_test <- function(kvals, sample.size, reps, tag, savemarker = 100) {
     if (j %% savemarker == 0 | j == trials) {
       print(sample.size)
       print(j)
-      est.df <- rbind(est.df, cbind(latent, linear, ipw, iv))
+      est.df <- rbind(est.df, cbind(latent, linear, ipw, iv, proximal))
       write.table(est.df,
         file.path(
           "Data", "Estimates",
@@ -78,6 +82,7 @@ binary_test <- function(kvals, sample.size, reps, tag, savemarker = 100) {
       ipw <- c()
       linear <- c()
       iv <- c()
+      proximal <- c()
     }
   }
 }

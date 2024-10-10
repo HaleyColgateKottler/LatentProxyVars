@@ -28,12 +28,13 @@ ratio_param_gen <- function(k, pvals, alpha, gamma, tag) {
 ratio_test <- function(kvals, pvals, sample.size, reps, tag, savemarker = 100) {
   for (p in pvals) {
     tag.new <- paste(tag, p, sep = "")
-    est.df <- data.frame(matrix(nrow = 0, ncol = 4))
-    colnames(est.df) <- c("latent", "linear", "IPW", "IV")
+    est.df <- data.frame(matrix(nrow = 0, ncol = 5))
+    colnames(est.df) <- c("latent", "linear", "IPW", "IV", "proximal")
     latent <- c()
     ipw <- c()
     linear <- c()
     iv <- c()
+    proximal <- c()
 
     for (j in 1:reps) {
       i <- j %% savemarker
@@ -48,6 +49,9 @@ ratio_test <- function(kvals, pvals, sample.size, reps, tag, savemarker = 100) {
       ipw[i] <- ipw.ate
       iv.ate <- IVest(raw.data)
       iv[i] <- iv.ate
+      proximal.ate <- proximal_causal(raw.data, paste("V", 1:floor(p/2), sep = ""),
+                                      paste("V", (floor(p/2)+1):p, sep = ""))
+      proximal[i] <- proximal.ate
 
       ate.est <- latent.ATE(raw.data, kvals[kvals <= p], p)
       latent[i] <- ate.est$estimate
@@ -55,7 +59,7 @@ ratio_test <- function(kvals, pvals, sample.size, reps, tag, savemarker = 100) {
       if (j %% savemarker == 0 | j == reps) {
         print(p)
         print(j)
-        est.df <- rbind(est.df, cbind(latent, linear, ipw, iv))
+        est.df <- rbind(est.df, cbind(latent, linear, ipw, iv, proximal))
         write.table(est.df,
           file.path(
             "Data", "Estimates",
@@ -71,6 +75,7 @@ ratio_test <- function(kvals, pvals, sample.size, reps, tag, savemarker = 100) {
         ipw <- c()
         linear <- c()
         iv <- c()
+        proximal <- c()
       }
     }
   }
@@ -136,5 +141,22 @@ graph.ratio <- function(tag, pvals) {
     ylab("Average ATE Estimate")
   ggsave(file.path("Data", "Figures", paste(tag, ".png",
     sep = ""
+  )))
+  
+  mean.ests <- mean.ests[mean.ests$Type != 'IV', ]
+  ggplot(mean.ests) +
+    geom_ribbon(aes(
+      x = P, ymin = Q.05, ymax = Q.95, fill = Type,
+      alpha = .05
+    )) +
+    geom_line(aes(x = P, y = Mean, group = Type, color = Type),
+              linewidth = 2
+    ) +
+    geom_point(aes(x = P, y = Mean, color = Type), size = 3) +
+    geom_hline(yintercept = true_ate) +
+    xlab("p") +
+    ylab("Average ATE Estimate")
+  ggsave(file.path("Data", "Figures", paste(tag, "_noIV.png",
+                                            sep = ""
   )))
 }

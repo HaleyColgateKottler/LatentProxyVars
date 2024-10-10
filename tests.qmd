@@ -69,7 +69,7 @@ bar.plots <- function(tag, plot.title, true.val, sample.size, trials){
   ),
   colClasses = "numeric"
 )
-colnames(temp.df) <- c("Latent", "Linear", "IPW", "IV")
+colnames(temp.df) <- c("Latent", "Linear", "IPW", "IV", "Proximal")
 temp = melt(temp.df)
 colnames(temp) <- c('Method', 'estimate')
 ggplot(temp) + geom_boxplot(aes(y = estimate, x = Method)) +
@@ -80,7 +80,7 @@ ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, ".
                                           sep = ""
 )))
 
-temp.df2 <- temp.df[,c('Latent', 'Linear', 'IPW')]
+temp.df2 <- temp.df[,c('Latent', 'Linear', 'IPW', 'Proximal')]
 temp = melt(temp.df2)
 colnames(temp) <- c('Method', 'estimate')
 ggplot(temp) + geom_boxplot(aes(y = estimate, x = Method)) +
@@ -95,8 +95,8 @@ ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, "_
 
 
 ```{r}
-trials <- 100
-sample.size <- 500
+trials <- 10
+sample.size <- 100
 ```
 
 ## Consistency
@@ -107,8 +107,8 @@ k = 2
 p = 9
 sample.sizes <- seq(from = 100, to = 1000, by = 100)
 
-test.consistency(tag, sample.sizes, 1:3, reps = trials)
-graph.consistency(tag, seq(from = 200, to = 1000, by = 200))
+test.consistency(tag, p, sample.sizes, 1:3, reps = trials)
+graph.consistency(tag, p, seq(from = 100, to = 1000, by = 100))
 ```
 
 ## UZ vs UA vs UY
@@ -130,7 +130,7 @@ tag = "IV"
 k = 2
 p = 9
 
-iv_test(1:9, sample.size, trials, tag)
+iv_test(1:9, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
@@ -145,17 +145,10 @@ tag = "skew"
 k = 2
 p = 9
 
-skew_test(1:9, sample.size, trials, tag)
-
-for (skew.level in c(5)){
-  skew_test(1:9, sample.size, 100, paste(tag, skew.level + 10, sep = ""))
-  bar.plots(paste(tag, skew.level + 10, sep = ""),
-            "True Model: Skew Normal", true_ate, sample.size, trials
-            )
-}
+skew_test(1:p, p, sample.size, trials, tag)
 
 load(file.path("Data", "Parameters",
-                 paste("param_", paste(tag, skew.level + 10, sep = ""), sample.size, ".RData", sep = "")))
+                 paste("param_", tag, sample.size, ".RData", sep = "")))
 true_ate <- gamma[1]
 bar.plots(tag, "True Model: Skew Normal", true_ate, sample.size, trials)
 ```
@@ -167,7 +160,7 @@ tag <- 'binary'
 k = 2
 p = 6
 
-binary_test(1:p, sample.size, trials, tag)
+binary_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
@@ -180,7 +173,7 @@ set.seed(127)
 tag <- 'no_latent'
 p = 6
 
-no_latent_test(1:p, sample.size, trials, tag)
+no_latent_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
@@ -208,7 +201,7 @@ tag <- 'squared'
 k = 1
 p = 6
 
-squared_test(1:p, sample.size, trials, tag)
+squared_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1] + gamma[3]
