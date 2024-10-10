@@ -7,16 +7,24 @@ skew_param_gen <- function(k, p, alpha, gamma, slant.alpha, tag) {
   psi[p + 1, p + 1] <- 1
 
   var_Y <- .1
+  
+  omega <- sqrt(1/(1-2*slant.alpha^2/(pi*(1+slant.alpha^2))))
+  xi <- -omega*slant.alpha/(sqrt(1+slant.alpha^2))*sqrt(2/pi)
 
   save(k, p, var_Y, lambda, psi, alpha, gamma, slant.alpha,
+       xi, omega,
     file = file.path(
       "Data", "Parameters",
-      paste(tag, sample.size,
+      paste('param_', tag, sample.size,
         ".RData",
         sep = ""
       )
     )
   )
+}
+
+for (skew.level in c(0, 2, 5)){
+  skew_param_gen(k, p, alpha, gamma, skew.level, paste(tag, skew.level + 10, sep = ""))
 }
 
 skew_az_gen <- function(tag, sample.size) {
@@ -25,7 +33,7 @@ skew_az_gen <- function(tag, sample.size) {
     paste("param_", tag, sample.size, ".RData", sep = "")
   ))
 
-  H <- rsn(sample.size, 0, 1, slant.alpha)
+  H <- rsn(sample.size, xi, omega, slant.alpha)
   Z <- t(lambda[1:p, ] %*% t(H)) + rmvnorm(sample.size, sigma = psi[1:p, 1:p])
   colnames(Z) <- paste0("V", 1:p)
   A <- t(lambda[p + 1, ] %*% t(H)) + rnorm(sample.size)

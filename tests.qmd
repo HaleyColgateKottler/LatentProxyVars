@@ -79,6 +79,17 @@ ggplot(temp) + geom_boxplot(aes(y = estimate, x = Method)) +
 ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, ".png",
                                           sep = ""
 )))
+
+temp.df2 <- temp.df[,c('Latent', 'Linear', 'IPW')]
+temp = melt(temp.df2)
+colnames(temp) <- c('Method', 'estimate')
+ggplot(temp) + geom_boxplot(aes(y = estimate, x = Method)) +
+  geom_hline(yintercept = true.val, color = 'green',
+             linewidth = 2) + ylab("ATE Estimate") +
+  ggtitle(plot.title)
+ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, "_noIV.png",
+                                          sep = ""
+)))
 }
 ```
 
@@ -135,8 +146,16 @@ k = 2
 p = 9
 
 skew_test(1:9, sample.size, trials, tag)
+
+for (skew.level in c(5)){
+  skew_test(1:9, sample.size, 100, paste(tag, skew.level + 10, sep = ""))
+  bar.plots(paste(tag, skew.level + 10, sep = ""),
+            "True Model: Skew Normal", true_ate, sample.size, trials
+            )
+}
+
 load(file.path("Data", "Parameters",
-                 paste("param_", tag, sample.size, ".RData", sep = "")))
+                 paste("param_", paste(tag, skew.level + 10, sep = ""), sample.size, ".RData", sep = "")))
 true_ate <- gamma[1]
 bar.plots(tag, "True Model: Skew Normal", true_ate, sample.size, trials)
 ```
