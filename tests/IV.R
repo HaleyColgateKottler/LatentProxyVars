@@ -1,5 +1,5 @@
 iv_param_gen <- function(k, p, alpha, gamma, tag) {
-  factor.loadings <- sigmaSim(k + p, 0, 1)
+  factor.loadings <- sigmaSim(k + p, 0, 2)
   lambda <- factor.loadings[[1]]
   psi <- factor.loadings[[2]]
   var_Y <- .1

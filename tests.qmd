@@ -95,19 +95,19 @@ ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, "_
 
 
 ```{r}
-trials <- 10
-sample.size <- 100
+trials <- 100
+sample.size <- 1000
 ```
 
 ## Consistency
 ```{r}
 set.seed(127)
 tag <- "consistency"
-k = 2
-p = 9
-sample.sizes <- seq(from = 100, to = 1000, by = 100)
+k = 3
+p = 12
+sample.sizes <- seq(from = 200, to = 1000, by = 200)
 
-test.consistency(tag, p, sample.sizes, 1:3, reps = trials)
+test.consistency(tag, p, sample.sizes, 1:4, reps = trials)
 graph.consistency(tag, p, seq(from = 100, to = 1000, by = 100))
 ```
 
@@ -142,8 +142,8 @@ bar.plots(tag, "True Model: Instrument Variable", true_ate, sample.size, trials)
 ```{r}
 set.seed(127)
 tag = "skew"
-k = 2
-p = 9
+k = 1
+p = 5
 
 skew_test(1:p, p, sample.size, trials, tag)
 
@@ -157,8 +157,8 @@ bar.plots(tag, "True Model: Skew Normal", true_ate, sample.size, trials)
 ```{r}
 set.seed(127)
 tag <- 'binary'
-k = 2
-p = 6
+k = 3
+p = 10
 
 binary_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
@@ -170,7 +170,7 @@ bar.plots(tag, "True Model: Probit A", true_ate, sample.size, trials)
 ## No Latent Variable
 ```{r}
 set.seed(127)
-tag <- 'no_latent'
+tag <- 'noLatent'
 p = 6
 
 no_latent_test(1:p, p, sample.size, trials, tag)

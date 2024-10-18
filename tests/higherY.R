@@ -1,5 +1,5 @@
 squared_param_gen <- function(k, p, alpha, gamma, tag) {
-  factor.loadings <- sigmaSim(k, p, 1)
+  factor.loadings <- sigmaSim(k, p, 3)
   lambda <- factor.loadings[[1]]
   psi <- factor.loadings[[2]]
 
@@ -15,6 +15,7 @@ squared_param_gen <- function(k, p, alpha, gamma, tag) {
     )
   )
 }
+
 # squared_param_gen(k, p, alpha, c(gamma[1:2], -.8), tag)
 squared_az_gen <- function(tag, sample.size) {
   load(file.path(

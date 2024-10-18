@@ -16,7 +16,7 @@ uzuauy_az_gen <- function(tag, sample.size) {
   write.table(Y, file = file.path("Data", "Samples", paste("Y_", tag, "_", sample.size, ".csv", sep = "")), row.names = FALSE, col.names = FALSE, sep = ",")
 }
 
-uzuauy_test <- function(kvals, sample.size, trials, tag, savemarker = 100) {
+uzuauy_test <- function(kvals, p, sample.size, trials, tag, savemarker = 100) {
   indexing <- 0
   for (z.level in c("low", "mid", "high")) {
     for (a.level in c("low", "mid", "high")) {
@@ -27,6 +27,7 @@ uzuauy_test <- function(kvals, sample.size, trials, tag, savemarker = 100) {
         ipw <- c()
         linear <- c()
         iv <- c()
+        proximal <- c()
 
         for (j in 1:trials) {
           i <- j %% savemarker
@@ -42,6 +43,9 @@ uzuauy_test <- function(kvals, sample.size, trials, tag, savemarker = 100) {
           ipw[i] <- ipw.ate
           iv.ate <- IVest(raw.data)
           iv[i] <- iv.ate
+          proximal.ate <- proximal_causal(raw.data, paste("V", 1:floor(p/2), sep = ""),
+                                          paste("V", (floor(p/2)+1):p, sep = ""))
+          proximal[i] <- proximal.ate
 
           ate.est <- latent.ATE(raw.data, kvals, p)
           latent[i] <- ate.est$estimate
@@ -49,7 +53,7 @@ uzuauy_test <- function(kvals, sample.size, trials, tag, savemarker = 100) {
           if (j %% savemarker == 0 | j == trials) {
             print(c(z.level, a.level, y.level))
             print(j)
-            est.df <- rbind(est.df, cbind(latent, linear, ipw, iv))
+            est.df <- rbind(est.df, cbind(latent, linear, ipw, iv, proximal))
             write.table(est.df,
               file.path(
                 "Data", "Estimates",
@@ -65,6 +69,7 @@ uzuauy_test <- function(kvals, sample.size, trials, tag, savemarker = 100) {
             ipw <- c()
             linear <- c()
             iv <- c()
+            proximal <- c()
           }
         }
       }
@@ -90,20 +95,24 @@ graph.uzuauy <- function(tag, sample.sizes) {
           ),
           colClasses = "numeric"
         )
-        mean.ests[4 * j - 3, ] <- c(
+        mean.ests[5 * j - 4, ] <- c(
           z.level, a.level, y.level, "linear", mean(temp.df$linear),
           quantile(temp.df$linear, probs = c(.05, .95))
         )
-        mean.ests[4 * j - 2, ] <- c(
+        mean.ests[5 * j - 3, ] <- c(
           z.level, a.level, y.level, "IPW", mean(temp.df$ipw),
           quantile(temp.df$ipw, probs = c(.05, .95))
         )
-        mean.ests[4 * j - 1, ] <- c(
+        mean.ests[5 * j - 2, ] <- c(
           z.level, a.level, y.level, "latent", mean(temp.df$latent),
           quantile(temp.df$latent, probs = c(.05, .95))
         )
-        mean.ests[4 * j, ] <- c(
+        mean.ests[5 * j - 1, ] <- c(
           z.level, a.level, y.level, "IV", mean(temp.df$iv),
+          quantile(temp.df$iv, probs = c(.05, .95))
+        )
+        mean.ests[5 * j, ] <- c(
+          z.level, a.level, y.level, "proximal", mean(temp.df$iv),
           quantile(temp.df$iv, probs = c(.05, .95))
         )
       }

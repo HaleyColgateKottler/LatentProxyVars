@@ -27,9 +27,13 @@ tag <- "1DwithAZ"
 k <- 1
 p <- 7
 savemarker <- 10
-dataGenNCE(k, p, 3, 1, 1000, .3, c(.5, .7, .9, -.6, -.8, .2, -.4), 2, matrix(c(1), nrow = 1,
-                                                                 byrow = TRUE),
-        .75, c(.5), c(-.2, .9, .7, .5, -.4, -.8, .1), tag)
+dataGenNCE(
+  k, p, 3, 1, 1000, .3, c(.5, .7, .9, -.6, -.8, .2, -.4), 2, matrix(c(1),
+    nrow = 1,
+    byrow = TRUE
+  ),
+  .75, c(.5), c(-.2, .9, .7, .5, -.4, -.8, .1), tag
+)
 sampleSize <- 1000
 load(file.path("Data", "Parameters", paste("param_", tag, ".RData", sep = "")))
 # lambda
@@ -45,28 +49,28 @@ IPW <- matrix(NaN, nrow = savemarker, ncol = 11)
 linear <- matrix(NaN, nrow = savemarker, ncol = 11)
 for (j in 0:9) {
   i <- j %% savemarker + 1
-  
+
   rawData <- dataImport(tag, sampleSize)
   ZH <- rawData[, c(paste0("V", 1:p), paste0("H", 1:k))]
-  
+
   rawData <- rawData[, which(!(colnames(rawData) %in% paste0("H", 1:k)))]
-  
-  z_weights = c(.8, -.6, .7, .9, -.8, .4, -.9)
-  
+
+  z_weights <- c(.8, -.6, .7, .9, -.8, .4, -.9)
+
   for (h.weight.base in 0:10) {
     h.weight <- h.weight.base * .1
-    
+
     for (entry.row in 1:1000) {
       zhrow <- ZH[entry.row, ]
       epsilon_A <- rnorm(1, mean = 0, sd = 1)
       epsilon_Y <- rnorm(1, mean = 0, sd = sqrt(var_Y))
       rawData$A[entry.row] <- (1 - h.weight) * (z_weights %*% t(zhrow[1:p])) +
-        h.weight * (lambda[p+1, 1:k] %*% t(zhrow[(p + 1):(p + k)])) + 
+        h.weight * (lambda[p + 1, 1:k] %*% t(zhrow[(p + 1):(p + k)])) +
         A_intercept + epsilon_A
-      rawData$Y[entry.row] <- (C1 %*% t(zhrow[(p + 1):(p + k)])) + 
+      rawData$Y[entry.row] <- (C1 %*% t(zhrow[(p + 1):(p + k)])) +
         C0 * rawData$A[entry.row] + Y_intercept + epsilon_Y
     }
-    
+
     linear.ATE <- linearEst(rawData)
     linear[i, h.weight.base + 1] <- linear.ATE
     IPW.ATE <- IPWest(rawData)
@@ -74,9 +78,9 @@ for (j in 0:9) {
     ATEest <- latent.ATE.NCE(rawData, k, p)
     latent[i, h.weight.base + 1] <- ATEest
   }
-  
+
   ATE.true <- C0
-  
+
   if ((j + 1) %% savemarker == 0) {
     print(j)
     est.df <- rbind(est.df, cbind(latent, linear, IPW))
@@ -88,7 +92,7 @@ for (j in 0:9) {
 }
 
 temp.df <- read.csv(file.path("Data", "Estimates", paste("ests_", tag, "_HZweighted.csv", sep = "")),
-                    colClasses = "numeric"
+  colClasses = "numeric"
 )
 
 mean.ests <- data.frame(matrix(nrow = 0, ncol = 5))

@@ -1,4 +1,5 @@
 source("newSEM.R")
+library(lavaan)
 fitUZA <- function(df, kvals, p) {
   smallerDF <- subset(df, select = -c(Y))
   z.vars <- names(smallerDF)[grep("^V", names(smallerDF))]
@@ -21,7 +22,7 @@ fitUZA <- function(df, kvals, p) {
 
     fit <- tryCatch(
       {
-        sem(model, data = smallerDF, rotation = "varimax")
+        suppressWarnings(sem(model, data = smallerDF, rotation = "varimax"))
       },
       error = function(e) {
         new_NullSEM(0)
