@@ -47,10 +47,10 @@ df <- df[,c('est', 'norm_low', 'norm_high',
             'perc_low', 'perc_high',
             'base_low', 'base_high')]
 
-for (i in 1:10){
+for (i in 1:100){
   azGen('boot', 500)
   raw.data <- data.import('boot', 500)
-  boot.out <- boot(data = raw.data, statistic = latent.func, R = 500)
+  boot.out <- boot(data = raw.data, statistic = latent.func, R = 2000)
   cis <- boot.ci(boot.out, type = c("norm", "perc", "basic"))
   df[nrow(df) + 1, ] <- c(boot.out$t0[[1]], cis$normal[2:3], cis$percent[4:5], cis$basic[4:5])
 }
@@ -84,12 +84,14 @@ ggplot(df) + geom_hline(yintercept = .5) +
     geom_point(aes(x=1:nrow(df), y = est, color = norm.cov)) +
     geom_errorbar(aes(x = 1:nrow(df), ymin = norm_low, ymax = norm_high,
                       color = norm.cov))
+ggsave(paste("coverage_plot_", tag, "_norm.png", sep = ""))
 ggplot(df) + geom_hline(yintercept = .5) +
   geom_point(aes(x=1:nrow(df), y = est, color = perc.cov)) +
   geom_errorbar(aes(x = 1:nrow(df), ymin = perc_low, ymax = perc_high,
                     color = perc.cov))
+ggsave(paste("coverage_plot_", tag, "_perc.png", sep = ""))
 ggplot(df) + geom_hline(yintercept = .5) +
   geom_point(aes(x=1:nrow(df), y = est, color = base.cov)) +
   geom_errorbar(aes(x = 1:nrow(df), ymin = base_low, ymax = base_high,
                     color = base.cov))
-ggsave(paste("coverage_plot_", tag, ".png", sep = ""))
+ggsave(paste("coverage_plot_", tag, "_base.png", sep = ""))

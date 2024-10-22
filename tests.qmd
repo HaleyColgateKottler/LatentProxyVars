@@ -14,6 +14,7 @@ library(mvtnorm)
 library(dplyr)
 library(reshape2)
 library(ggplot2)
+library(patchwork)
 source("datagen.R")
 source("computeTrue.R")
 source("comparisonMethods.R")
@@ -72,24 +73,25 @@ bar.plots <- function(tag, plot.title, true.val, sample.size, trials){
 colnames(temp.df) <- c("Latent", "Linear", "IPW", "IV", "Proximal")
 temp = melt(temp.df)
 colnames(temp) <- c('Method', 'estimate')
-ggplot(temp) + geom_boxplot(aes(y = estimate, x = Method)) +
+p1 <- ggplot(temp) + geom_boxplot(aes(y = estimate, x = Method), outliers = FALSE) +
   geom_hline(yintercept = true.val, color = 'green',
              linewidth = 2) + ylab("ATE Estimate") +
   ggtitle(plot.title)
 ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, ".png",
                                           sep = ""
-)))
+)), plot = p1)
 
 temp.df2 <- temp.df[,c('Latent', 'Linear', 'IPW', 'Proximal')]
 temp = melt(temp.df2)
 colnames(temp) <- c('Method', 'estimate')
-ggplot(temp) + geom_boxplot(aes(y = estimate, x = Method)) +
+p2 <- ggplot(temp) + geom_boxplot(aes(y = estimate, x = Method), outliers = FALSE) +
   geom_hline(yintercept = true.val, color = 'green',
              linewidth = 2) + ylab("ATE Estimate") +
   ggtitle(plot.title)
 ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, "_noIV.png",
                                           sep = ""
-)))
+)), p2)
+return(list(p1, p2))
 }
 ```
 
@@ -108,7 +110,7 @@ p = 12
 sample.sizes <- seq(from = 200, to = 1000, by = 200)
 
 test.consistency(tag, p, sample.sizes, 1:4, reps = trials)
-graph.consistency(tag, p, seq(from = 100, to = 1000, by = 100))
+consistency.plots <- graph.consistency(tag, p, seq(from = 200, to = 1000, by = 200))
 ```
 
 ## UZ vs UA vs UY
@@ -120,7 +122,7 @@ uzuauy_test(1:5, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_zhigh_ahigh_y40", ".RData", sep = "")))
 true_ate <- gamma[1]
-graph.uzuauy(tag, sample.size)
+uzuauy.plots <- graph.uzuauy(tag, sample.size)
 ```
 
 ## IV
@@ -134,7 +136,7 @@ iv_test(1:9, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
-bar.plots(tag, "True Model: Instrument Variable", true_ate, sample.size, trials)
+iv.plots <- bar.plots(tag, "True Model: Instrument Variable", true_ate, sample.size, trials)
 ```
 
 
@@ -150,7 +152,7 @@ skew_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, sample.size, ".RData", sep = "")))
 true_ate <- gamma[1]
-bar.plots(tag, "True Model: Skew Normal", true_ate, sample.size, trials)
+skew.plots <- bar.plots(tag, "True Model: Skew Normal", true_ate, sample.size, trials)
 ```
 
 ## Binary A
@@ -164,7 +166,7 @@ binary_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
-bar.plots(tag, "True Model: Probit A", true_ate, sample.size, trials)
+binary.plots <- bar.plots(tag, "True Model: Probit A", true_ate, sample.size, trials)
 ```
 
 ## No Latent Variable
@@ -177,7 +179,7 @@ no_latent_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
-bar.plots(tag, "True Model: No Latent Variable", true_ate, sample.size, trials)
+nolatent.plots <- bar.plots(tag, "True Model: No Latent Variable", true_ate, sample.size, trials)
 ```
 
 ## Different ratios of Z to U
@@ -191,7 +193,7 @@ ratio_test(1:max(pvals), pvals, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, pvals[1], ".RData", sep = "")))
 true_ate <- gamma[1]
-graph.ratio(tag, pvals)
+ratio.plots <- graph.ratio(tag, pvals)
 ```
 
 ## Higher Order Y
@@ -200,10 +202,19 @@ set.seed(127)
 tag <- 'squared'
 k = 1
 p = 6
-
 squared_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1] + gamma[3]
-bar.plots(tag, "True Model: Higher Order Dependence on U", true_ate, sample.size, trials)
+square.plots <- bar.plots(tag, "True Model: Higher Order Dependence on U", true_ate, sample.size, trials)
 ```
+
+```{r}
+full.panel <- consistency.plots[[1]]/ 
+  (nolatent.plots[[1]] | binary.plots[[1]] | iv.plots[[1]]) / 
+  (skew.plots[[1]] | (square.plots[[1]] / 
+                        skew.plots[[1]] )) / 
+  consistency.plots[[1]]
+```
+
+

@@ -151,11 +151,11 @@ proximal_causal <- function(df, nco.names, nce.names){
   gamma <- m1$coefficients[c("A", paste("A:wav", 1:length(nco.names), sep = ""))]
   
   # calc CATE
-  mWVformula <- paste(paste0(nco.names, collapse = " + "),
+  mWVformulas <- paste(nco.names,
                       " ~ ", paste0(nce.names, collapse = " + "))
-  m.WV <- lm(mWVformula, df)
-  WV <- predict(m.WV, df)
-  CATE <- gamma[1] + gamma[2:4] %*% t(WV)
+  m.WVs <- lapply(mWVformulas, lm, data = df)
+  WVs <- lapply(m.WVs, predict, data = df)
+  CATE <- gamma[1] + gamma[2:(1 + length(nco.names))] %*% t(sapply(WVs, unlist))
   ATE <- mean(CATE)
   return(ATE)
 }
