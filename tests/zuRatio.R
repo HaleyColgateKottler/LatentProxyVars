@@ -28,8 +28,19 @@ ratio_param_gen <- function(k, pvals, alpha, gamma, tag) {
 ratio_test <- function(kvals, pvals, sample.size, reps, tag, savemarker = 100) {
   for (p in pvals) {
     tag.new <- paste(tag, p, sep = "")
-    est.df <- data.frame(matrix(nrow = 0, ncol = 5))
-    colnames(est.df) <- c("latent", "linear", "IPW", "IV", "proximal")
+    file.name <- file.path(
+      "Data", "Estimates",
+      paste("ests_", tag.new, as.character(sample.size),
+            ".csv",
+            sep = ""
+      )
+    )
+    if (file.exists(file.name)){
+      est.df <- read.csv(file.name)
+    } else {
+      est.df <- data.frame(matrix(nrow = 0, ncol = 5))
+      colnames(est.df) <- c("latent", "linear", "IPW", "IV", "proximal")
+    }
     latent <- c()
     ipw <- c()
     linear <- c()
@@ -37,7 +48,7 @@ ratio_test <- function(kvals, pvals, sample.size, reps, tag, savemarker = 100) {
     proximal <- c()
 
     for (j in 1:reps) {
-      i <- j %% savemarker
+      i <- j %% savemarker + 1
 
       azGen(tag.new, sample.size)
 
@@ -96,67 +107,81 @@ graph.ratio <- function(tag, pvals) {
       ),
       colClasses = "numeric"
     )
-    mean.ests[4 * j - 3, ] <- c(
-      p, "linear", mean(temp.df$linear),
-      quantile(temp.df$linear, probs = c(.05, .95))
+    
+    mean.ests[5 * j - 4, ] <- c(
+      p/k, "linear", mean(temp.df$linear, na.rm = TRUE),
+      quantile(temp.df$linear, probs = c(.05, .95), na.rm = TRUE)
     )
-    mean.ests[4 * j - 2, ] <- c(
-      p, "IPW", mean(temp.df$ipw),
-      quantile(temp.df$ipw, probs = c(.05, .95))
+    mean.ests[5 * j - 3, ] <- c(
+      p/k, "IPW", mean(temp.df$ipw, na.rm = TRUE),
+      quantile(temp.df$ipw, probs = c(.05, .95), na.rm = TRUE)
     )
-    mean.ests[4 * j - 1, ] <- c(
-      p, "latent", mean(temp.df$latent),
-      quantile(temp.df$latent, probs = c(.05, .95))
+    mean.ests[5 * j, ] <- c(
+      p/k, "latent", mean(temp.df$latent, na.rm = TRUE),
+      quantile(temp.df$latent, probs = c(.05, .95), na.rm = TRUE)
     )
-    mean.ests[4 * j, ] <- c(
-      p, "IV", mean(temp.df$iv),
-      quantile(temp.df$iv, probs = c(.05, .95))
+    mean.ests[5 * j - 1, ] <- c(
+      p/k, "IV", mean(temp.df$iv, na.rm = TRUE),
+      quantile(temp.df$iv, probs = c(.05, .95), na.rm = TRUE)
+    )
+    mean.ests[5 * j - 2, ] <- c(
+      p/k, "proximal", mean(temp.df$proximal, na.rm = TRUE),
+      quantile(temp.df$proximal, probs = c(.05, .95), na.rm = TRUE)
     )
   }
 
-  colnames(mean.ests) <- c("P", "Type", "Mean", "Q.05", "Q.95")
-  mean.ests$Type <- factor(mean.ests$Type)
-  mean.ests$P <- as.numeric(mean.ests$P)
+  colnames(mean.ests) <- c("pk", "Method", "Mean", "Q.05", "Q.95")
+  mean.ests$Method <- factor(mean.ests$Method)
+  mean.ests$pk <- as.numeric(mean.ests$pk)
   mean.ests$Mean <- as.numeric(mean.ests$Mean)
   mean.ests$Q.05 <- as.numeric(mean.ests$Q.05)
   mean.ests$Q.95 <- as.numeric(mean.ests$Q.95)
 
-  mean.ests <- mean.ests[order(mean.ests$P), ]
+  mean.ests <- mean.ests[order(mean.ests$pk), ]
   load(file.path(
     "Data", "Parameters",
     paste("param_", tag, p, ".RData", sep = "")
   ))
   true_ate <- gamma[1]
-  ggplot(mean.ests) +
+  p1 <- ggplot(mean.ests) +
+    geom_hline(yintercept = true_ate) +
     geom_ribbon(aes(
-      x = P, ymin = Q.05, ymax = Q.95, fill = Type,
+      x = pk, ymin = Q.05, ymax = Q.95, fill = Method,
       alpha = .05
     )) +
-    geom_line(aes(x = P, y = Mean, group = Type, color = Type),
+    geom_line(aes(x = pk, y = Mean, group = Method, color = Method),
       linewidth = 2
     ) +
-    geom_point(aes(x = P, y = Mean, color = Type), size = 3) +
-    geom_hline(yintercept = true_ate) +
-    xlab("p") +
-    ylab("Average ATE Estimate")
+    geom_point(aes(x = pk, y = Mean, color = Method), size = 3) +
+    xlab("p/k") +
+    ylab("ATE Estimate") + guides(alpha = "none") +
+    ggtitle("Ratio of p to k") +
+    theme(legend.position = c(.87, .5)) +
+    coord_cartesian(ylim = c(-2, 2)) +
+    scale_x_continuous(breaks = 1:10)
   ggsave(file.path("Data", "Figures", paste(tag, ".png",
     sep = ""
-  )))
+  )), p1)
   
-  mean.ests <- mean.ests[mean.ests$Type != 'IV', ]
-  ggplot(mean.ests) +
+  mean.ests <- mean.ests[mean.ests$Method != 'IV', ]
+  p2 <- ggplot(mean.ests) +
+    geom_hline(yintercept = true_ate) +
     geom_ribbon(aes(
-      x = P, ymin = Q.05, ymax = Q.95, fill = Type,
+      x = pk, ymin = Q.05, ymax = Q.95, fill = Method,
       alpha = .05
     )) +
-    geom_line(aes(x = P, y = Mean, group = Type, color = Type),
+    geom_line(aes(x = pk, y = Mean, group = Method, color = Method),
               linewidth = 2
     ) +
-    geom_point(aes(x = P, y = Mean, color = Type), size = 3) +
-    geom_hline(yintercept = true_ate) +
-    xlab("p") +
-    ylab("Average ATE Estimate")
+    geom_point(aes(x = pk, y = Mean, color = Method), size = 3) +
+    xlab("p/k") +
+    ylab("ATE Estimate") + guides(alpha = "none") +
+    ggtitle("Ratio of p to k") +
+    theme(legend.position = c(.87, .5)) +
+    coord_cartesian(ylim = c(-2, 2)) +
+    scale_x_continuous(breaks = 1:10)
   ggsave(file.path("Data", "Figures", paste(tag, "_noIV.png",
                                             sep = ""
-  )))
+  )), p2)
+  return(list(p1,p2))
 }

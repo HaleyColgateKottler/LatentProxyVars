@@ -42,8 +42,19 @@ skew_az_gen <- function(tag, sample.size) {
 }
 
 skew_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
-  est.df <- data.frame(matrix(nrow = 0, ncol = 5))
-  colnames(est.df) <- c("latent", "linear", "IPW", "IV", "proximal")
+  file.name <- file.path(
+    "Data", "Estimates",
+    paste("ests_", tag, as.character(sample.size),
+          ".csv",
+          sep = ""
+    )
+  )
+  if (file.exists(file.name)){
+    est.df <- read.csv(file.name)
+  } else {
+    est.df <- data.frame(matrix(nrow = 0, ncol = 5))
+    colnames(est.df) <- c("latent", "linear", "IPW", "IV", "proximal")
+  }
   latent <- c()
   ipw <- c()
   linear <- c()
@@ -51,7 +62,7 @@ skew_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
   proximal <- c()
 
   for (j in 1:trials) {
-    i <- j %% savemarker
+    i <- j %% savemarker + 1
 
     skew_az_gen(tag, sample.size)
     raw.data <- data.import(tag, sample.size)

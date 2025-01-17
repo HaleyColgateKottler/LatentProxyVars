@@ -30,7 +30,7 @@ uzuauy_test <- function(kvals, p, sample.size, trials, tag, savemarker = 100) {
         proximal <- c()
 
         for (j in 1:trials) {
-          i <- j %% savemarker
+          i <- j %% savemarker + 1
           temp.tag <- paste("z", z.level, "_a", a.level, "_y", y.level, sep = "")
 
           uzuauy_az_gen(temp.tag, sample.size)
@@ -159,7 +159,7 @@ graph.uzuauy <- function(tag, sample.sizes) {
     paste("param_", temp.tag, ".RData", sep = "")
   ))
   true_ate <- gamma[1]
-  ggplot(mean.ests) +
+  p1 <- ggplot(mean.ests) +
     geom_boxplot(aes(x = y.level, y = Mean)) +
     facet_wrap(z.level ~ a.level) +
     geom_hline(yintercept = true_ate) +
@@ -167,9 +167,9 @@ graph.uzuauy <- function(tag, sample.sizes) {
   ggsave(file.path("Data", "Figures", paste("UZUAUY_byY",
     tag, ".png",
     sep = ""
-  )))
+  )), p1)
 
-  ggplot(mean.ests) +
+  p2 <- ggplot(mean.ests) +
     geom_boxplot(aes(x = a.level, y = Mean)) +
     facet_wrap(y.level ~ z.level) +
     geom_hline(yintercept = true_ate) +
@@ -177,9 +177,9 @@ graph.uzuauy <- function(tag, sample.sizes) {
   ggsave(file.path("Data", "Figures", paste("UZUAUY_byA",
     tag, ".png",
     sep = ""
-  )))
+  )), p2)
 
-  ggplot(mean.ests) +
+  p3 <- ggplot(mean.ests) +
     geom_boxplot(aes(x = z.level, y = Mean)) +
     facet_wrap(a.level ~ y.level) +
     geom_hline(yintercept = true_ate) +
@@ -187,7 +187,8 @@ graph.uzuauy <- function(tag, sample.sizes) {
   ggsave(file.path("Data", "Figures", paste("UZUAUY_byZ",
     tag, ".png",
     sep = ""
-  )))
+  )), p3)
+  return(list(p1,p2,p3))
 }
 
 
@@ -197,64 +198,112 @@ graph.uzuauy <- function(tag, sample.sizes) {
 # set.seed(127)
 # k = 1
 # p = 9
-#
-# uz.low <- sigmaSim(k, p-1, 1)
-# uz.mid <- sigmaSim(k, p-1, 2)
-# uz.high <- sigmaSim(k, p-1, 3)
-#
-# info.uz <- c(det(uz.low[[1]] %*% t(uz.low[[1]]) + uz.low[[2]]) / det(uz.low[[2]]),
-#              det(uz.mid[[1]] %*% t(uz.mid[[1]]) + uz.mid[[2]]) / det(uz.mid[[2]]),
-#              det(uz.high[[1]] %*% t(uz.high[[1]]) + uz.high[[2]]) / det(uz.high[[2]])
-#              )
-# info.uz <- .5*log(info.uz)
-#
-#
-# ua.low <- sigmaSim(k, 0, 1)[[1]]
-# ua.mid <- sigmaSim(k, 0, 2)[[1]]
-# ua.high <- sigmaSim(k, 0, 3)[[1]]
-#
-# info.ua <- c(ua.low %*% t(ua.low) + 1,
-#              ua.mid %*% t(ua.mid) + 1,
-#              ua.high %*% t(ua.high) + 1
-#              )
-# info.ua <- .5*log(info.ua)
-#
-# alpha <- c(.5, -.8)
-#
-# get.gamma <- function(alpha, gamma, b, target){
-#   numerat <- alpha[2]^2 + 2*gamma*alpha[2]*b + gamma^2*b^2
-#   const <- -1/b^2
-#   sqrt((numerat/target-.1)*const)
+# 
+# uz.lows <- list()
+# uz.mids <- list()
+# uz.highs <- list()
+# infos <- data.frame(matrix(0, nrow = 0, ncol = 3))
+# 
+# for (i in 1:100){
+#   uz.low <- sigmaSim(k, p-1, 1)
+#   uz.mid <- sigmaSim(k, p-1, 2)
+#   uz.high <- sigmaSim(k, p-1, 3)
+#   
+#   uz.lows[[i]] <- uz.low
+#   uz.mids[[i]] <- uz.mid
+#   uz.highs[[i]] <- uz.high
+#   
+#   info.uz <- c(det(uz.low[[1]] %*% t(uz.low[[1]]) + uz.low[[2]]) / det(uz.low[[2]]),
+#                det(uz.mid[[1]] %*% t(uz.mid[[1]]) + uz.mid[[2]]) / det(uz.mid[[2]]),
+#                det(uz.high[[1]] %*% t(uz.high[[1]]) + uz.high[[2]]) / det(uz.high[[2]])
+#                )
+#   info.uz <- .5*log(info.uz)
+#   infos[i,] <- info.uz
 # }
-
+# 
+# min.info <- min(infos[,1])
+# max.info <- max(infos[,3])
+# mid.info <- (min.info + max.info)/2
+# 
+# min.loc <- which(infos[,1] == min.info)
+# max.loc <- which(infos[,3] == max.info)
+# mid.difs <- abs(infos[,2] - mid.info)
+# mid.loc <- which(mid.difs == min(mid.difs))
+# 
+# uz.low <- uz.lows[[min.loc]]
+# uz.mid <- uz.mids[[mid.loc]]
+# uz.high <- uz.highs[[max.loc]]
+# 
+# 
+# ua.lows <- list()
+# ua.mids <- list()
+# ua.highs <- list()
+# infos <- data.frame(matrix(0, nrow = 0, ncol = 3))
+# 
+# for (i in 1:100){
+#   ua.low <- sigmaSim(k, 0, 1)[[1]]
+#   ua.mid <- sigmaSim(k, 0, 2)[[1]]
+#   ua.high <- sigmaSim(k, 0, 3)[[1]]
+#   
+#   ua.lows[[i]] <- ua.low
+#   ua.mids[[i]] <- ua.mid
+#   ua.highs[[i]] <- ua.high
+#   
+#   info.az <- c(ua.low %*% t(ua.low) + 1,
+#                ua.mid %*% t(ua.mid) + 1,
+#                ua.high %*% t(ua.high) + 1
+#   )
+#   info.az <- .5*log(info.az)
+#   infos[i,] <- info.az
+# }
+# 
+# min.info <- min(infos[,1])
+# max.info <- max(infos[,3])
+# mid.info <- (min.info + max.info)/2
+# 
+# min.loc <- which(infos[,1] == min.info)
+# max.loc <- which(infos[,3] == max.info)
+# mid.difs <- abs(infos[,2] - mid.info)
+# mid.loc <- which(mid.difs == min(mid.difs))
+# 
+# ua.low <- ua.lows[[min.loc[[1]]]]
+# ua.mid <- ua.mids[[mid.loc[[1]]]]
+# ua.high <- ua.highs[[max.loc[[1]]]]
+# 
+# alpha <- c(.5, -.8)
+# get.gamma <- function(alpha, gamma, b, target){
+#    numerat <- alpha[2]^2 + 2*gamma*alpha[2]*b + gamma^2*b^2# - .1 * (target - 1)
+#    const <- 2*(target-1)*b^2
+#    sqrt(numerat/const)
+# }
+# 
 # lambdas <- list('low' = uz.low[[1]],
 #                 'mid' = uz.mid[[1]],
 #                 'high' = uz.high[[1]])
 # psis <- list('low' = uz.low[[2]],
 #                 'mid' = uz.mid[[2]],
 #                 'high' = uz.high[[2]])
-#
+# 
 # betas <- list('low' = ua.low,
-#               'mid' = ua.mid,
-#               'high' = ua.high)
-#
+#              'mid' = ua.mid,
+#              'high' = ua.high)
 # gammas <- data.frame(matrix(0, nrow = 0, ncol = 3))
 # i=1
 # for (alev in c('low', 'mid', 'high')){
-#   for (ylev in c(20, 40, 60)){
-#     gammas[i,] <- c(alev, ylev, get.gamma(alpha, -.7, betas[[alev]], ylev))
+#   for (ylev in c(10, 20, 30)){
+#     gammas[i,] <- c(alev, ylev, get.gamma(alpha, .7, betas[[alev]], ylev))
 #     i = i+1
 #   }
 # }
-#
+# 
 # for (zlev in c('low', 'mid', 'high')){
 #   for (alev in c('low', 'mid', 'high')){
-#     for (ylev in c(20, 40, 60)){
+#     for (ylev in c(10, 20, 30)){
 #       lambda <- lambdas[[zlev]]
 #       psi <- psis[[zlev]]
 #       b <- betas[[alev]]
-#       gamma <- c(-.7, get.gamma(alpha, -.7, b, ylev))
-#
+#       gamma <- c(.7, get.gamma(alpha, .7, b, ylev))
+# 
 #       save(k, p, lambda, psi, alpha, gamma, b,
 #           file = file.path("Data", "Parameters",
 #           paste("param_z", zlev, "_a", alev, "_y", ylev, ".RData", sep = "")))

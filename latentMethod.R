@@ -36,13 +36,20 @@ fitUZA <- function(df, kvals, p) {
   }
 
   fit <- fits[[which(AICs == min(AICs))]]
-
-  parameters <- list(
+  
+  parameters <- tryCatch(
+    {
+    list(
     lambda.est = inspect(fit, what = "est")$lambda,
     psi.est = inspect(fit, what = "est")$theta,
     sigma.est = inspect(fit, what = "est")$psi,
     nu.est = inspect(fit, what = "est")$nu,
     k = k.keeps[which(AICs == min(AICs))]
+  )
+      },
+  error = function(e){
+    NULL
+  }
   )
   return(parameters)
 }
@@ -137,6 +144,6 @@ latent.ATE <- function(raw.data, kvals, p) {
     # se.est = calcSE(raw.data, p, k, EM_output, 1)
     return(list("estimate" = ATEest))
   } else {
-    return(NULL)
+    return(list("estimate" = NaN))
   }
 }

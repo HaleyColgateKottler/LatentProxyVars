@@ -33,8 +33,19 @@ no_latent_az_gen <- function(tag, sample.size) {
 }
 
 no_latent_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
-  est.df <- data.frame(matrix(nrow = 0, ncol = 5))
-  colnames(est.df) <- c("latent", "linear", "IPW", "IV", "proximal")
+  file.name <- file.path(
+    "Data", "Estimates",
+    paste("ests_", tag, as.character(sample.size),
+          ".csv",
+          sep = ""
+    )
+  )
+  if (file.exists(file.name)){
+    est.df <- read.csv(file.name)
+  } else {
+    est.df <- data.frame(matrix(nrow = 0, ncol = 5))
+    colnames(est.df) <- c("latent", "linear", "IPW", "IV", "proximal")
+  }
   latent <- c()
   ipw <- c()
   linear <- c()
@@ -42,7 +53,7 @@ no_latent_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
   proximal <- c()
   reps <- trials
   for (j in 1:reps) {
-    i <- j %% savemarker
+    i <- j %% savemarker + 1
 
     no_latent_az_gen(tag, sample.size)
     raw.data <- data.import(tag, sample.size)

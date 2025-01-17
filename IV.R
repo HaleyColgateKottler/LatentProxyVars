@@ -23,43 +23,43 @@ for (sample.size in 0:4) {
   ipw <- c()
   linear <- c()
   iv <- c()
-  
+
   for (j in 1:100) {
     i <- j %% savemarker + 1
-    
+
     U <- rnorm(sample.size)
     Z <- rmvnorm(sample.size, mean = c(.5, .7, -.8))
-    A <- -.9*U *( c(.1, -.7, .4) %*% t(Z)) - 1 + .4*rnorm(sample.size)
+    A <- -.9 * U * (c(.1, -.7, .4) %*% t(Z)) - 1 + .4 * rnorm(sample.size)
     Y <- -.8 * U + .5 * A + .2 + rnorm(sample.size)
-    raw.data <- data.frame('Z' = Z, 'A' = A, 'Y' = Y)
+    raw.data <- data.frame("Z" = Z, "A" = A, "Y" = Y)
     colnames(raw.data) <- c("V1", "V2", "V3", "A", "Y")
-    
+
     ate.true <- .5
-    
+
     linear.ate <- linearEst(raw.data)
     linear[i] <- linear.ate
     ipw.ate <- IPWest(raw.data)
     ipw[i] <- ipw.ate
     iv.ate <- IVest(raw.data)
     iv[i] <- iv.ate
-    
+
     ate.est <- latent.ATE(raw.data, k, p)
     latent[i] <- ate.est
-    
+
     if (j %% savemarker == 0) {
       print(sample.size)
       print(j)
       est.df <- rbind(est.df, cbind(latent, linear, ipw, iv))
       write.table(est.df,
-                  file.path(
-                    "Data", "Estimates",
-                    paste("ests_", tag, as.character(sample.size),
-                          "_IVtrial.csv",
-                          sep = ""
-                    )
-                  ),
-                  sep = ",",
-                  row.names = FALSE
+        file.path(
+          "Data", "Estimates",
+          paste("ests_", tag, as.character(sample.size),
+            "_IVtrial.csv",
+            sep = ""
+          )
+        ),
+        sep = ",",
+        row.names = FALSE
       )
       latent <- c()
       ipw <- c()
@@ -78,8 +78,8 @@ for (j in 0:4) {
     file.path(
       "Data", "Estimates",
       paste("ests_", tag, as.character(samp.size),
-            "_IVtrial.csv",
-            sep = ""
+        "_IVtrial.csv",
+        sep = ""
       )
     ),
     colClasses = "numeric"
@@ -117,7 +117,7 @@ ggplot(mean.ests) +
     alpha = .025
   )) +
   geom_line(aes(x = SampleSize, y = Mean, group = Type, color = Type),
-            linewidth = 2
+    linewidth = 2
   ) +
   geom_point(aes(x = SampleSize, y = Mean, color = Type), size = 3) +
   geom_hline(yintercept = 0.5) +
@@ -125,6 +125,6 @@ ggplot(mean.ests) +
   xlab("Sample Size") +
   ylab("Average ATE Estimate")
 ggsave(file.path("Data", "Figures", paste("Errs_by_sample.size_",
-                                          tag, "_IVtrial.png",
-                                          sep = ""
+  tag, "_IVtrial.png",
+  sep = ""
 )))

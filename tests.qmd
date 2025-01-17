@@ -73,10 +73,13 @@ bar.plots <- function(tag, plot.title, true.val, sample.size, trials){
 colnames(temp.df) <- c("Latent", "Linear", "IPW", "IV", "Proximal")
 temp = melt(temp.df)
 colnames(temp) <- c('Method', 'estimate')
-p1 <- ggplot(temp) + geom_boxplot(aes(y = estimate, x = Method), outliers = FALSE) +
+p1 <- ggplot(temp) + 
   geom_hline(yintercept = true.val, color = 'green',
-             linewidth = 2) + ylab("ATE Estimate") +
-  ggtitle(plot.title)
+             linewidth = 1) + ylab("ATE Estimate") +
+  geom_boxplot(aes(y = estimate, x = Method), outliers = FALSE) +
+  ggtitle(plot.title) +
+    coord_cartesian(ylim = c(-.5, 1.5)) +
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, ".png",
                                           sep = ""
 )), plot = p1)
@@ -84,10 +87,13 @@ ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, ".
 temp.df2 <- temp.df[,c('Latent', 'Linear', 'IPW', 'Proximal')]
 temp = melt(temp.df2)
 colnames(temp) <- c('Method', 'estimate')
-p2 <- ggplot(temp) + geom_boxplot(aes(y = estimate, x = Method), outliers = FALSE) +
+p2 <- ggplot(temp) + 
   geom_hline(yintercept = true.val, color = 'green',
-             linewidth = 2) + ylab("ATE Estimate") +
-  ggtitle(plot.title)
+             linewidth = 1) + ylab("ATE Estimate") +
+  geom_boxplot(aes(y = estimate, x = Method), outliers = FALSE) +
+  ggtitle(plot.title) +
+    coord_cartesian(ylim = c(-.5, 1.5)) +
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, "_noIV.png",
                                           sep = ""
 )), p2)
@@ -97,7 +103,7 @@ return(list(p1, p2))
 
 
 ```{r}
-trials <- 100
+trials <- 1000
 sample.size <- 1000
 ```
 
@@ -107,10 +113,9 @@ set.seed(127)
 tag <- "consistency"
 k = 3
 p = 12
-sample.sizes <- seq(from = 200, to = 1000, by = 200)
-
-test.consistency(tag, p, sample.sizes, 1:4, reps = trials)
-consistency.plots <- graph.consistency(tag, p, seq(from = 200, to = 1000, by = 200))
+sample.sizes <- seq(from = 9000, to = 10000, by = 500)
+# test.consistency(tag, p, sample.sizes, 1:4, reps = trials)
+consistency.plots <- graph.consistency(tag, p, seq(from = 1000, to = 10000, by = 500))
 ```
 
 ## UZ vs UA vs UY
@@ -118,7 +123,7 @@ consistency.plots <- graph.consistency(tag, p, seq(from = 200, to = 1000, by = 2
 set.seed(127)
 tag = ""
 p=9
-uzuauy_test(1:5, sample.size, trials, tag)
+# uzuauy_test(1:5, 9, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_zhigh_ahigh_y40", ".RData", sep = "")))
 true_ate <- gamma[1]
@@ -132,11 +137,11 @@ tag = "IV"
 k = 2
 p = 9
 
-iv_test(1:9, p, sample.size, trials, tag)
+# iv_test(1:9, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
-iv.plots <- bar.plots(tag, "True Model: Instrument Variable", true_ate, sample.size, trials)
+iv.plots <- bar.plots(tag, "Instrument Variable", true_ate, sample.size, trials)
 ```
 
 
@@ -147,12 +152,12 @@ tag = "skew"
 k = 1
 p = 5
 
-skew_test(1:p, p, sample.size, trials, tag)
+# skew_test(1:p, p, sample.size, trials, tag)
 
 load(file.path("Data", "Parameters",
                  paste("param_", tag, sample.size, ".RData", sep = "")))
 true_ate <- gamma[1]
-skew.plots <- bar.plots(tag, "True Model: Skew Normal", true_ate, sample.size, trials)
+skew.plots <- bar.plots(tag, "Skew Normal", true_ate, sample.size, trials)
 ```
 
 ## Binary A
@@ -162,11 +167,13 @@ tag <- 'binary'
 k = 3
 p = 10
 
-binary_test(1:p, p, sample.size, trials, tag)
+# binary_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
-binary.plots <- bar.plots(tag, "True Model: Probit A", true_ate, sample.size, trials)
+
+
+binary.plots <- bar.plots(tag, "Probit A", true_ate, sample.size, trials)
 ```
 
 ## No Latent Variable
@@ -175,11 +182,11 @@ set.seed(127)
 tag <- 'noLatent'
 p = 6
 
-no_latent_test(1:p, p, sample.size, trials, tag)
+# no_latent_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
-nolatent.plots <- bar.plots(tag, "True Model: No Latent Variable", true_ate, sample.size, trials)
+nolatent.plots <- bar.plots(tag, "No Latent Variable", true_ate, sample.size, trials)
 ```
 
 ## Different ratios of Z to U
@@ -187,9 +194,9 @@ nolatent.plots <- bar.plots(tag, "True Model: No Latent Variable", true_ate, sam
 set.seed(127)
 tag <- 'ratio'
 k <- 2
-pvals <- c(2, 4, 6, 8, 10, 12, 14, 16)
+pvals <- c(2, 4, 6, 8, 10, 12, 14, 16, 18, 20)
 
-ratio_test(1:max(pvals), pvals, sample.size, trials, tag)
+# ratio_test(1:max(pvals), pvals, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, pvals[1], ".RData", sep = "")))
 true_ate <- gamma[1]
@@ -202,19 +209,25 @@ set.seed(127)
 tag <- 'squared'
 k = 1
 p = 6
-squared_test(1:p, p, sample.size, trials, tag)
+# squared_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1] + gamma[3]
-square.plots <- bar.plots(tag, "True Model: Higher Order Dependence on U", true_ate, sample.size, trials)
+square.plots <- bar.plots(tag, "Higher Order\nMoments", true_ate, sample.size, trials)
 ```
 
 ```{r}
-full.panel <- consistency.plots[[1]]/ 
-  (nolatent.plots[[1]] | binary.plots[[1]] | iv.plots[[1]]) / 
-  (skew.plots[[1]] | (square.plots[[1]] / 
-                        skew.plots[[1]] )) / 
-  consistency.plots[[1]]
+design <- "
+111222333
+444555555
+666777788
+"
+temp1 <- nolatent.plots[[1]] + binary.plots[[1]] + iv.plots[[1]] + square.plots[[1]] + consistency.plots[[1]] + skew.plots[[1]] + ratio.plots[[1]] + guide_area() +
+  plot_layout(design = design, guides = 'collect') +
+  plot_annotation(tag_levels = "I") & theme(plot.tag.position = c(0,1))
+
+ggsave(file.path('Data', 'Figures', 'plotpanel.png'), plot = temp1,
+       width = 8, height = 8, units = "in", dpi = 1200)
 ```
 
 
