@@ -43,16 +43,21 @@ if (file.exists(save.name)){
 } else {
   df <- data.frame(matrix(0, nrow = 0, ncol = 7))
 }
-df <- df[,c('est', 'norm_low', 'norm_high',
+colnames(df) <- c('est', 'norm_low', 'norm_high',
             'perc_low', 'perc_high',
-            'base_low', 'base_high')]
+            'base_low', 'base_high')
 
-for (i in 1:100){
+for (i in 11:100){
+  print(i)
+  set.seed(i)
   azGen('boot', 500)
   raw.data <- data.import('boot', 500)
   boot.out <- boot(data = raw.data, statistic = latent.func, R = 2000)
   cis <- boot.ci(boot.out, type = c("norm", "perc", "basic"))
   df[nrow(df) + 1, ] <- c(boot.out$t0[[1]], cis$normal[2:3], cis$percent[4:5], cis$basic[4:5])
+  if (i %% 10 == 0){
+    write.csv(df, save.name, row.names = FALSE)
+  }
 }
 
 write.csv(df, save.name, row.names = FALSE)
