@@ -1,6 +1,7 @@
 test.consistency <- function(tag, p, sample.sizes, kvals, savemarker = 100, reps = 100) {
   indexing <- 0
   for (sample.size in sample.sizes) {
+    set.seed(127+sample.size/100)
     indexing <- indexing + 1
     file.name <- file.path(
       "Data", "Estimates",
@@ -22,6 +23,7 @@ test.consistency <- function(tag, p, sample.sizes, kvals, savemarker = 100, reps
     proximal <- c()
 
     for (j in 1:reps) {
+      print(j)
       i <- j %% savemarker + 1
 
       azGen(tag, sample.size)
@@ -38,8 +40,8 @@ test.consistency <- function(tag, p, sample.sizes, kvals, savemarker = 100, reps
                                       paste("V", (floor(p/2)+1):p, sep = ""))
       proximal[i] <- proximal.ate
 
-      ate.est <- latent.ATE(raw.data, kvals, p)
-      latent[i] <- ate.est$estimate
+      ate.est <- latent.ATE(raw.data, kvals, p)$estimate
+      latent[i] <- ate.est
 
       if (j %% savemarker == 0 | j == reps) {
         print(sample.size)
@@ -82,33 +84,33 @@ graph.consistency <- function(tag, p, sample.sizes) {
       colClasses = "numeric"
     )
     mean.ests[5 * j - 4, ] <- c(
-      samp.size, "linear", mean(temp.df$linear, na.rm = TRUE),
-      quantile(temp.df$linear, probs = c(.05, .95), na.rm = TRUE)
+      samp.size, "linear", median(temp.df$linear, na.rm = TRUE),
+      quantile(temp.df$linear, probs = c(.25, .75), na.rm = TRUE)
     )
     mean.ests[5 * j - 3, ] <- c(
-      samp.size, "IPW", mean(temp.df$ipw, na.rm = TRUE),
-      quantile(temp.df$ipw, probs = c(.05, .95), na.rm = TRUE)
+      samp.size, "IPW", median(temp.df$ipw, na.rm = TRUE),
+      quantile(temp.df$ipw, probs = c(.25, .75), na.rm = TRUE)
     )
     mean.ests[5 * j, ] <- c(
-      samp.size, "latent", mean(temp.df$latent, na.rm = TRUE),
-      quantile(temp.df$latent, probs = c(.05, .95), na.rm = TRUE)
+      samp.size, "latent", median(temp.df$latent, na.rm = TRUE),
+      quantile(temp.df$latent, probs = c(.25, .75), na.rm = TRUE)
     )
     mean.ests[5 * j - 1, ] <- c(
-      samp.size, "IV", mean(temp.df$iv, na.rm = TRUE),
-      quantile(temp.df$iv, probs = c(.05, .95), na.rm = TRUE)
+      samp.size, "IV", median(temp.df$iv, na.rm = TRUE),
+      quantile(temp.df$iv, probs = c(.25, .75), na.rm = TRUE)
     )
     mean.ests[5 * j - 2, ] <- c(
-      samp.size, "proximal", mean(temp.df$proximal, na.rm = TRUE),
-      quantile(temp.df$proximal, probs = c(.05, .95), na.rm = TRUE)
+      samp.size, "proximal", median(temp.df$proximal, na.rm = TRUE),
+      quantile(temp.df$proximal, probs = c(.25, .75), na.rm = TRUE)
     )
   }
 
-  colnames(mean.ests) <- c("SampleSize", "Method", "Mean", "Q.05", "Q.95")
+  colnames(mean.ests) <- c("SampleSize", "Method", "Mean", "Q.25", "Q.75")
   mean.ests$Method <- factor(mean.ests$Method)
   mean.ests$SampleSize <- as.numeric(mean.ests$SampleSize)
   mean.ests$Mean <- as.numeric(mean.ests$Mean)
-  mean.ests$Q.05 <- as.numeric(mean.ests$Q.05)
-  mean.ests$Q.95 <- as.numeric(mean.ests$Q.95)
+  mean.ests$Q.25 <- as.numeric(mean.ests$Q.25)
+  mean.ests$Q.75 <- as.numeric(mean.ests$Q.75)
 
   mean.ests <- mean.ests[order(mean.ests$SampleSize), ]
   load(file.path(
@@ -118,29 +120,9 @@ graph.consistency <- function(tag, p, sample.sizes) {
   true_ate <- gamma[1]
   main.plot1 <- ggplot(mean.ests) +
     geom_ribbon(aes(
-      x = SampleSize, ymin = Q.05, ymax = Q.95, fill = Method,
-      alpha = .05
-    )) +
-    geom_hline(yintercept = true_ate) +
-    geom_line(aes(x = SampleSize, y = Mean, group = Method, color = Method),
-      linewidth = 2
+      x = SampleSize, ymin = Q.25, ymax = Q.75, fill = Method),
+      alpha = .3
     ) +
-    geom_point(aes(x = SampleSize, y = Mean, color = Method), size = 3) +
-    xlab("Sample Size") +
-    ylab("ATE Estimate") + guides(alpha = "none") +
-    ggtitle("Consistency") +
-    theme(legend.position = c(.87, .5))
-  ggsave(file.path("Data", "Figures", paste("Errs_by_sample_size_",
-    tag, ".png",
-    sep = ""
-  )), plot = main.plot1)
-  
-  mean.ests <- mean.ests[mean.ests$Method == 'latent', ]
-  main.plot2 <- ggplot(mean.ests) +
-    geom_ribbon(aes(
-      x = SampleSize, ymin = Q.05, ymax = Q.95, fill = Method,
-      alpha = .025
-    )) +
     geom_hline(yintercept = true_ate) +
     geom_line(aes(x = SampleSize, y = Mean, group = Method, color = Method),
               linewidth = 2
@@ -148,10 +130,28 @@ graph.consistency <- function(tag, p, sample.sizes) {
     geom_point(aes(x = SampleSize, y = Mean, color = Method), size = 3) +
     xlab("Sample Size") +
     ylab("ATE Estimate") + guides(alpha = "none") +
-    ggtitle("Consistency") +
     theme(legend.position = c(.87, .5))
   ggsave(file.path("Data", "Figures", paste("Errs_by_sample_size_",
-                                            tag, "_onlyLatent.png",
+    tag, ".png",
+    sep = ""
+  )), plot = main.plot1)
+  
+  mean.ests <- mean.ests[mean.ests$Method != 'IV', ]
+  main.plot2 <- ggplot(mean.ests) +
+    geom_ribbon(aes(
+      x = SampleSize, ymin = Q.25, ymax = Q.75, fill = Method),
+      alpha = .3
+    ) +
+    geom_hline(yintercept = true_ate) +
+    geom_line(aes(x = SampleSize, y = Mean, group = Method, color = Method),
+                  linewidth = 2
+    ) +
+    geom_point(aes(x = SampleSize, y = Mean, color = Method), size = 3) +
+    xlab("Sample Size") +
+    ylab("ATE Estimate") + guides(alpha = "none") +
+    theme(legend.position = c(.87, .5))
+  ggsave(file.path("Data", "Figures", paste("Errs_by_sample_size_",
+                                            tag, "_noIV.png",
                                             sep = ""
   )), plot = main.plot2)
   return(list(main.plot1, main.plot2))

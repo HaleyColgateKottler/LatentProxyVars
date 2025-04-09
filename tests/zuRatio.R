@@ -109,33 +109,33 @@ graph.ratio <- function(tag, pvals) {
     )
     
     mean.ests[5 * j - 4, ] <- c(
-      p/k, "linear", mean(temp.df$linear, na.rm = TRUE),
-      quantile(temp.df$linear, probs = c(.05, .95), na.rm = TRUE)
+      p/k, "linear", median(temp.df$linear, na.rm = TRUE),
+      quantile(temp.df$linear, probs = c(.25, .75), na.rm = TRUE)
     )
     mean.ests[5 * j - 3, ] <- c(
-      p/k, "IPW", mean(temp.df$ipw, na.rm = TRUE),
-      quantile(temp.df$ipw, probs = c(.05, .95), na.rm = TRUE)
+      p/k, "IPW", median(temp.df$ipw, na.rm = TRUE),
+      quantile(temp.df$ipw, probs = c(.25, .75), na.rm = TRUE)
     )
     mean.ests[5 * j, ] <- c(
-      p/k, "latent", mean(temp.df$latent, na.rm = TRUE),
-      quantile(temp.df$latent, probs = c(.05, .95), na.rm = TRUE)
+      p/k, "latent", median(temp.df$latent, na.rm = TRUE),
+      quantile(temp.df$latent, probs = c(.25, .75), na.rm = TRUE)
     )
     mean.ests[5 * j - 1, ] <- c(
-      p/k, "IV", mean(temp.df$iv, na.rm = TRUE),
-      quantile(temp.df$iv, probs = c(.05, .95), na.rm = TRUE)
+      p/k, "IV", median(temp.df$iv, na.rm = TRUE),
+      quantile(temp.df$iv, probs = c(.25, .75), na.rm = TRUE)
     )
     mean.ests[5 * j - 2, ] <- c(
-      p/k, "proximal", mean(temp.df$proximal, na.rm = TRUE),
-      quantile(temp.df$proximal, probs = c(.05, .95), na.rm = TRUE)
+      p/k, "proximal", median(temp.df$proximal, na.rm = TRUE),
+      quantile(temp.df$proximal, probs = c(.25, .75), na.rm = TRUE)
     )
   }
 
-  colnames(mean.ests) <- c("pk", "Method", "Mean", "Q.05", "Q.95")
+  colnames(mean.ests) <- c("pk", "Method", "Mean", "Q.25", "Q.75")
   mean.ests$Method <- factor(mean.ests$Method)
   mean.ests$pk <- as.numeric(mean.ests$pk)
   mean.ests$Mean <- as.numeric(mean.ests$Mean)
-  mean.ests$Q.05 <- as.numeric(mean.ests$Q.05)
-  mean.ests$Q.95 <- as.numeric(mean.ests$Q.95)
+  mean.ests$Q.25 <- as.numeric(mean.ests$Q.25)
+  mean.ests$Q.75 <- as.numeric(mean.ests$Q.75)
 
   mean.ests <- mean.ests[order(mean.ests$pk), ]
   load(file.path(
@@ -146,18 +146,17 @@ graph.ratio <- function(tag, pvals) {
   p1 <- ggplot(mean.ests) +
     geom_hline(yintercept = true_ate) +
     geom_ribbon(aes(
-      x = pk, ymin = Q.05, ymax = Q.95, fill = Method,
-      alpha = .05
-    )) +
+      x = pk, ymin = Q.25, ymax = Q.75, fill = Method),
+      alpha = .3
+    ) +
     geom_line(aes(x = pk, y = Mean, group = Method, color = Method),
-      linewidth = 2
+              linewidth = 2
     ) +
     geom_point(aes(x = pk, y = Mean, color = Method), size = 3) +
     xlab("p/k") +
     ylab("ATE Estimate") + guides(alpha = "none") +
-    ggtitle("Ratio of p to k") +
     theme(legend.position = c(.87, .5)) +
-    coord_cartesian(ylim = c(-2, 2)) +
+    coord_cartesian(ylim = c(-.5, 1.5)) +
     scale_x_continuous(breaks = 1:10)
   ggsave(file.path("Data", "Figures", paste(tag, ".png",
     sep = ""
@@ -167,18 +166,17 @@ graph.ratio <- function(tag, pvals) {
   p2 <- ggplot(mean.ests) +
     geom_hline(yintercept = true_ate) +
     geom_ribbon(aes(
-      x = pk, ymin = Q.05, ymax = Q.95, fill = Method,
-      alpha = .05
-    )) +
+      x = pk, ymin = Q.25, ymax = Q.75, fill = Method),
+      alpha = .3
+    ) +
     geom_line(aes(x = pk, y = Mean, group = Method, color = Method),
               linewidth = 2
     ) +
     geom_point(aes(x = pk, y = Mean, color = Method), size = 3) +
     xlab("p/k") +
     ylab("ATE Estimate") + guides(alpha = "none") +
-    ggtitle("Ratio of p to k") +
     theme(legend.position = c(.87, .5)) +
-    coord_cartesian(ylim = c(-2, 2)) +
+    coord_cartesian(ylim = c(-.5, 1.5)) +
     scale_x_continuous(breaks = 1:10)
   ggsave(file.path("Data", "Figures", paste(tag, "_noIV.png",
                                             sep = ""

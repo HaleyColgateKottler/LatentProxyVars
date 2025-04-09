@@ -1,11 +1,13 @@
 source("newSEM.R")
 library(lavaan)
+library(boot)
+library(parallel)
 fitUZA <- function(df, kvals, p) {
   smallerDF <- subset(df, select = -c(Y))
   z.vars <- names(smallerDF)[grep("^V", names(smallerDF))]
 
   fits <- c()
-  AICs <- c()
+  BICs <- c()
   k.keeps <- c()
   for (k in kvals) {
     h.vars <- paste0("efa('efa1')*h", 1:k)
@@ -30,12 +32,12 @@ fitUZA <- function(df, kvals, p) {
     )
     if (inspect(fit, "converged")) {
       fits <- c(fits, fit)
-      AICs <- c(AICs, AIC(fit))
+      BICs <- c(BICs, BIC(fit))
       k.keeps <- c(k.keeps, k)
     }
   }
 
-  fit <- fits[[which(AICs == min(AICs))]]
+  fit <- fits[[which(BICs == min(BICs))]]
   
   parameters <- tryCatch(
     {
@@ -44,7 +46,7 @@ fitUZA <- function(df, kvals, p) {
     psi.est = inspect(fit, what = "est")$theta,
     sigma.est = inspect(fit, what = "est")$psi,
     nu.est = inspect(fit, what = "est")$nu,
-    k = k.keeps[which(AICs == min(AICs))]
+    k = k.keeps[which(BICs == min(BICs))]
   )
       },
   error = function(e){
@@ -81,7 +83,6 @@ linearCATE <- function(z, betas, params, a1, a2) {
 
   z.vars <- paste0("V", 1:p)
   M.vars <- paste0("M", 1:k)
-  # gamma = c(betas[which(c(rep(0,k+1), 0, rep(1,k))==1)], betas[which(c(rep(0,k+1),1,rep(0,k))==1)])
   gamma <- c(betas[paste0(M.vars, ":A")], betas["A"])
 
   psi.inv.centered <- solve(params$psi.est[1:p, 1:p], z - params$nu.est[1:p])
@@ -141,9 +142,21 @@ latent.ATE <- function(raw.data, kvals, p) {
       "gamma" = betas[!(names(betas) %in% c("(Intercept)", M.vars))],
       "beta" = ATEest
     )
-    # se.est = calcSE(raw.data, p, k, EM_output, 1)
     return(list("estimate" = ATEest))
   } else {
     return(list("estimate" = NaN))
   }
+}
+
+bootstrap.latent <- function(raw.data, kvals, p, ncores = 1) {
+  latent.func <- function(data.df, indices) {
+    df <- data.df[indices,]
+    latent.ATE(df, kvals, p)$estimate
+  }
+  
+  boot.out <- boot(data = raw.data, statistic = latent.func, R = 500,
+                   parallel = "multicore", ncpus = ncores)
+  cis <- boot.ci(boot.out, type = c("basic"))
+  
+  return(c(boot.out$t0[[1]], cis$basic[4:5]))
 }

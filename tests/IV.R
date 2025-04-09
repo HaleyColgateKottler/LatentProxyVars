@@ -1,5 +1,5 @@
 iv_param_gen <- function(k, p, alpha, gamma, tag) {
-  factor.loadings <- sigmaSim(k, 0, 3)
+  factor.loadings <- sigmaSim(k + p, 0, 3)
   lambda <- factor.loadings[[1]]
   psi <- factor.loadings[[2]]
   var_Y <- .1
@@ -20,7 +20,8 @@ iv_az_gen <- function(tag, sample.size) {
     paste("param_", tag, ".RData", sep = "")
   ))
 
-  Z <- rmvnorm(sample.size, sigma = diag(p))
+  # Z <- rmvnorm(sample.size, sigma = diag(p))
+  Z <- replicate(p, runif(sample.size))
   colnames(Z) <- paste0("V", 1:p)
   H <- rmvnorm(sample.size, mean = rep(0, k))
   A <- t(lambda %*% t(cbind(Z, H))) + rnorm(sample.size)
@@ -43,10 +44,12 @@ iv_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
   if (file.exists(file.name)){
     est.df <- read.csv(file.name)
   } else {
-    est.df <- data.frame(matrix(nrow = 0, ncol = 5))
-    colnames(est.df) <- c("latent", "linear", "IPW", "IV", "proximal")
+    est.df <- data.frame(matrix(nrow = 0, ncol = 7))
+    colnames(est.df) <- c("latent", "low", "high", "linear", "IPW", "IV", "proximal")
   }
   latent <- c()
+  low <- c()
+  high <- c()
   ipw <- c()
   linear <- c()
   iv <- c()
@@ -67,18 +70,16 @@ iv_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
                                     paste("V", (floor(p/2)+1):p, sep = ""))
     proximal[i] <- proximal.ate
 
-    ate.est <- latent.ATE(raw.data, kvals, p)
-    if (!is.null(ate.est)) {
-      est <- ate.est$estimate
-    } else {
-      est <- NaN
-    }
-    latent[i] <- est
+    ate.est <- bootstrap.latent(raw.data, kvals, p, 6)
+    
+    latent[i] <- ate.est[1]
+    low[i] <- ate.est[2]
+    high[i] <- ate.est[3]
 
     if (j %% savemarker == 0 | j == reps) {
       print(sample.size)
       print(j)
-      est.df <- rbind(est.df, cbind(latent, linear, ipw, iv, proximal))
+      est.df <- rbind(est.df, cbind(latent, low, high, linear, ipw, iv, proximal))
       write.table(est.df,
         file.path(
           "Data", "Estimates",
@@ -91,6 +92,8 @@ iv_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
         row.names = FALSE
       )
       latent <- c()
+      low <- c()
+      high <- c()
       ipw <- c()
       linear <- c()
       iv <- c()

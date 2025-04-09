@@ -15,6 +15,7 @@ library(dplyr)
 library(reshape2)
 library(ggplot2)
 library(patchwork)
+library(boot)
 source("datagen.R")
 source("computeTrue.R")
 source("comparisonMethods.R")
@@ -104,43 +105,29 @@ return(list(p1, p2))
 
 ```{r}
 trials <- 1000
-sample.size <- 1000
+sample.size <- 500
 ```
 
 ## Consistency
 ```{r}
-set.seed(127)
 tag <- "consistency"
-k = 3
-p = 12
-sample.sizes <- seq(from = 9000, to = 10000, by = 500)
-# test.consistency(tag, p, sample.sizes, 1:4, reps = trials)
-consistency.plots <- graph.consistency(tag, p, seq(from = 1000, to = 10000, by = 500))
-```
-
-## UZ vs UA vs UY
-```{r}
-set.seed(127)
-tag = ""
-p=9
-# uzuauy_test(1:5, 9, sample.size, trials, tag)
-load(file.path("Data", "Parameters",
-                 paste("param_zhigh_ahigh_y40", ".RData", sep = "")))
-true_ate <- gamma[1]
-uzuauy.plots <- graph.uzuauy(tag, sample.size)
+k = 2
+p = 8
+sample.sizes <- seq(from = 500, to = 7500, by = 1000)
+test.consistency(tag, p, sample.sizes, 1:p, reps = trials)
+consistency.plots <- graph.consistency(tag, p, seq(from = 500, to = 7500, by = 1000))
 ```
 
 ## IV
 ```{r}
 set.seed(127)
-tag = "IV"
+tag = "iv2"
 k = 2
-p = 9
+p = 6
 
-# iv_test(1:9, p, sample.size, trials, tag)
-load(file.path("Data", "Parameters",
-                 paste("param_", tag, ".RData", sep = "")))
-true_ate <- gamma[1]
+iv_test(1:6, p, sample.size, trials, tag)
+load(file.path("Data", "Parameters", paste("param_", tag, ".RData", sep = "")))
+true_ate <- gamma[1]6
 iv.plots <- bar.plots(tag, "Instrument Variable", true_ate, sample.size, trials)
 ```
 
@@ -152,7 +139,7 @@ tag = "skew"
 k = 1
 p = 5
 
-# skew_test(1:p, p, sample.size, trials, tag)
+skew_test(1:p, p, sample.size, trials, tag)
 
 load(file.path("Data", "Parameters",
                  paste("param_", tag, sample.size, ".RData", sep = "")))
@@ -167,7 +154,7 @@ tag <- 'binary'
 k = 3
 p = 10
 
-# binary_test(1:p, p, sample.size, trials, tag)
+binary_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
@@ -182,7 +169,7 @@ set.seed(127)
 tag <- 'noLatent'
 p = 6
 
-# no_latent_test(1:p, p, sample.size, trials, tag)
+no_latent_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
@@ -196,7 +183,7 @@ tag <- 'ratio'
 k <- 2
 pvals <- c(2, 4, 6, 8, 10, 12, 14, 16, 18, 20)
 
-# ratio_test(1:max(pvals), pvals, sample.size, trials, tag)
+ratio_test(1:max(pvals), pvals, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, pvals[1], ".RData", sep = "")))
 true_ate <- gamma[1]
@@ -209,7 +196,7 @@ set.seed(127)
 tag <- 'squared'
 k = 1
 p = 6
-# squared_test(1:p, p, sample.size, trials, tag)
+squared_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1] + gamma[3]
@@ -217,17 +204,55 @@ square.plots <- bar.plots(tag, "Higher Order\nMoments", true_ate, sample.size, t
 ```
 
 ```{r}
-design <- "
-111222333
-444555555
-666777788
-"
-temp1 <- nolatent.plots[[1]] + binary.plots[[1]] + iv.plots[[1]] + square.plots[[1]] + consistency.plots[[1]] + skew.plots[[1]] + ratio.plots[[1]] + guide_area() +
-  plot_layout(design = design, guides = 'collect') +
-  plot_annotation(tag_levels = "I") & theme(plot.tag.position = c(0,1))
 
-ggsave(file.path('Data', 'Figures', 'plotpanel.png'), plot = temp1,
-       width = 8, height = 8, units = "in", dpi = 1200)
+design1 <- "
+111112
+333332
+"
+
+lineplots <- consistency.plots[[1]] + guide_area() +
+  ratio.plots[[1]] +
+  plot_layout(design = design1, guides = 'collect') +
+  plot_annotation(tag_levels = "A") & theme(plot.tag.position = c(0,1))
+
+ggsave(file.path('Data', 'Figures', 'lineplotpanel.png'),
+       plot = lineplots,
+       width = 8, height = 6, units = "in", dpi = 1200)
+
+lineplots_noiv <- consistency.plots[[2]] + guide_area() +
+  ratio.plots[[2]] +
+  plot_layout(design = design1, guides = 'collect') +
+  plot_annotation(tag_levels = "A") & theme(plot.tag.position = c(0,1))
+
+ggsave(file.path('Data', 'Figures', 'lineplotpanel_noiv.png'),
+       plot = lineplots_noiv,
+       width = 8, height = 4, units = "in", dpi = 1200)
+
+
+layout <- c(
+  area(t = 1, l = 1,   b = 2, r = 6),
+  area(t = 3, l = 2, b = 4, r = 5)
+)
+
+plot(layout)
+
+boxplotpanel <- 
+  (square.plots[[1]] + skew.plots[[1]] + binary.plots[[1]]) / (nolatent.plots[[1]] + iv.plots[[1]]) +
+    plot_layout(design = layout
+                ) +
+  plot_annotation(tag_levels = "A")
+
+ggsave(file.path('Data', 'Figures', 'boxplotpanel.png'), plot = boxplotpanel,
+       width = 8, height = 6, units = "in", dpi = 1200)
+
+
+boxplotpanel_noiv <- 
+  (square.plots[[2]] + skew.plots[[2]] + binary.plots[[2]])/ (nolatent.plots[[2]] + iv.plots[[2]]) +
+    plot_layout(design = layout) +
+  plot_annotation(tag_levels = "A")
+
+ggsave(file.path('Data', 'Figures', 'boxplotpanel_noiv.png'), plot = boxplotpanel_noiv,
+       width = 8, height = 6, units = "in", dpi = 1200)
 ```
 
 

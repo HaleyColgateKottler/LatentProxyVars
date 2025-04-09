@@ -47,10 +47,12 @@ binary_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
   if (file.exists(file.name)){
     est.df <- read.csv(file.name)
   } else {
-    est.df <- data.frame(matrix(nrow = 0, ncol = 5))
-    colnames(est.df) <- c("latent", "linear", "IPW", "IV", "proximal")
+    est.df <- data.frame(matrix(nrow = 0, ncol = 7))
+    colnames(est.df) <- c("latent", "low", "high", "linear", "IPW", "IV", "proximal")
   }
   latent <- c()
+  low <- c()
+  high <- c()
   ipw <- c()
   linear <- c()
   iv <- c()
@@ -71,13 +73,16 @@ binary_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
                                     paste("V", (floor(p/2)+1):p, sep = ""))
     proximal[i] <- proximal.ate
 
-    ate.est <- latent.ATE(raw.data, kvals, p)
-    latent[i] <- ate.est$estimate
+    ate.est <- bootstrap.latent(raw.data, kvals, p, 6)
+    
+    latent[i] <- ate.est[1]
+    low[i] <- ate.est[2]
+    high[i] <- ate.est[3]
 
     if (j %% savemarker == 0 | j == trials) {
       print(sample.size)
       print(j)
-      est.df <- rbind(est.df, cbind(latent, linear, ipw, iv, proximal))
+      est.df <- rbind(est.df, cbind(latent, low, high, linear, ipw, iv, proximal))
       write.table(est.df,
         file.path(
           "Data", "Estimates",
@@ -90,6 +95,8 @@ binary_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
         row.names = FALSE
       )
       latent <- c()
+      low <- c()
+      high <- c()
       ipw <- c()
       linear <- c()
       iv <- c()

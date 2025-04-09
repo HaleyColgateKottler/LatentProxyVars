@@ -4,3 +4,5 @@ Data/Samples
 Data/Estimates
 Data/Parameters/old
 .Rproj.user
+*.RData
+*.png

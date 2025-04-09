@@ -85,16 +85,22 @@ for (i in 1:nrow(df)){
 df$norm.cov <- factor(norm.cov)
 df$perc.cov <- factor(perc.cov)
 df$base.cov <- factor(base.cov)
+tag <- 'norm'
 ggplot(df) + geom_hline(yintercept = .5) +
     geom_point(aes(x=1:nrow(df), y = est, color = norm.cov)) +
     geom_errorbar(aes(x = 1:nrow(df), ymin = norm_low, ymax = norm_high,
                       color = norm.cov))
 ggsave(paste("coverage_plot_", tag, "_norm.png", sep = ""))
+df$norm.cov
+
+tag <- 'perc'
 ggplot(df) + geom_hline(yintercept = .5) +
   geom_point(aes(x=1:nrow(df), y = est, color = perc.cov)) +
   geom_errorbar(aes(x = 1:nrow(df), ymin = perc_low, ymax = perc_high,
                     color = perc.cov))
 ggsave(paste("coverage_plot_", tag, "_perc.png", sep = ""))
+
+tag <- 'base'
 ggplot(df) + geom_hline(yintercept = .5) +
   geom_point(aes(x=1:nrow(df), y = est, color = base.cov)) +
   geom_errorbar(aes(x = 1:nrow(df), ymin = base_low, ymax = base_high,

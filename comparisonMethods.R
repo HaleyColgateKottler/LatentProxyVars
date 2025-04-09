@@ -42,7 +42,6 @@ continuousIPWest <- function(df) {
   m1 <- glm(formula = A ~ ., family = gaussian(link = "identity"), data = AZ)
   meanAZ <- predict(m1, newdata = Z, type = "response")
   varAZ <- var(df$A - meanAZ)
-
   weightings <- dnorm(df$A, mean = meanAZ, sd = sqrt(varAZ))
 
   m2 <- glm(formula = A ~ 1, family = gaussian(link = "identity"), data = AZ)
@@ -54,23 +53,18 @@ continuousIPWest <- function(df) {
   df$A2 <- df$A^2
   m3 <- glm(
     formula = formula(paste("Y ~ 1 + A + A2 + ", paste0(colnames(Z), collapse = " +"))), family = gaussian(link = "identity"),
-    data = df, weights = full.weights
-  )
+    data = df, weights = full.weights)
 
-  newdata1 <- data.frame("A" = 1, Z)
-  newdata1$A2 <- 1
+  newdata1 <- data.frame("A" = 1, Z, "A2" = 1)
   EY1 <- mean(predict(m3, newdata1))
-  newdata0 <- data.frame("A" = 0, Z)
-  newdata0$A2 <- 0
+  newdata0 <- data.frame("A" = 0, Z, "A2" = 0)
   EY0 <- mean(predict(m3, newdata0))
-  IPW.ATE <- EY1 - EY0
 
-  return(IPW.ATE)
+  return(EY1 - EY0)
 }
 
 IVest <- function(df) {
   AZ <- subset(df, select = -c(Y))
-  Z <- subset(AZ, select = -c(A))
 
   m1 <- lm(formula = A ~ ., data = AZ)
   df$x <- predict(m1, newdata = df)
@@ -113,18 +107,6 @@ matchingBinaryEst <- function(df) {
 
   return(matching.ATE)
 }
-
-control <- function(df) {
-  Z.names <- colnames(df)[!(colnames(df) %in% c("A", "Y"))]
-  ests <- c()
-  for (z.name in Z.names) {
-    mod <- lm(paste(z.name, " ~ Y + A", sep = ""), df)
-    ate.est <- -mod$coefficients["A"] / mod$coefficients["Y"]
-    ests <- c(ests, ate.est)
-  }
-  return(mean(ests))
-}
-
 
 proximal_causal <- function(df, nco.names, nce.names){
   wformulas <- paste(nco.names,
