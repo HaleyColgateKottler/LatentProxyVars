@@ -55,6 +55,7 @@ no_latent_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
   proximal <- c()
   reps <- trials
   for (j in 1:reps) {
+    print(j)
     i <- j %% savemarker + 1
 
     no_latent_az_gen(tag, sample.size)

@@ -99,7 +99,7 @@ graph.ratio <- function(tag, pvals) {
     j <- j + 1
     temp.df <- read.csv(
       file.path(
-        "Data", "Estimates",
+        "Data", "Estimates", "fullests",
         paste("ests_", tag, p, sample.size,
           ".csv",
           sep = ""
@@ -145,14 +145,8 @@ graph.ratio <- function(tag, pvals) {
   true_ate <- gamma[1]
   p1 <- ggplot(mean.ests) +
     geom_hline(yintercept = true_ate) +
-    geom_ribbon(aes(
-      x = pk, ymin = Q.25, ymax = Q.75, fill = Method),
-      alpha = .3
-    ) +
-    geom_line(aes(x = pk, y = Mean, group = Method, color = Method),
-              linewidth = 2
-    ) +
-    geom_point(aes(x = pk, y = Mean, color = Method), size = 3) +
+    geom_line(aes(x = pk, y = Mean, group = Method, linetype = Method)) +
+    geom_point(aes(x = pk, y = Mean, shape = Method)) +
     xlab("p/k") +
     ylab("ATE Estimate") + guides(alpha = "none") +
     theme(legend.position = c(.87, .5)) +
@@ -165,14 +159,8 @@ graph.ratio <- function(tag, pvals) {
   mean.ests <- mean.ests[mean.ests$Method != 'IV', ]
   p2 <- ggplot(mean.ests) +
     geom_hline(yintercept = true_ate) +
-    geom_ribbon(aes(
-      x = pk, ymin = Q.25, ymax = Q.75, fill = Method),
-      alpha = .3
-    ) +
-    geom_line(aes(x = pk, y = Mean, group = Method, color = Method),
-              linewidth = 2
-    ) +
-    geom_point(aes(x = pk, y = Mean, color = Method), size = 3) +
+    geom_line(aes(x = pk, y = Mean, group = Method, linetype = Method)) +
+    geom_point(aes(x = pk, y = Mean, shape = Method)) +
     xlab("p/k") +
     ylab("ATE Estimate") + guides(alpha = "none") +
     theme(legend.position = c(.87, .5)) +

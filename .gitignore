@@ -1,8 +1,7 @@
 old_data
 Data/Figures
 Data/Samples
-Data/Estimates
+Data/Estimates/old
 Data/Parameters/old
 .Rproj.user
-*.RData
 *.png

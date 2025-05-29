@@ -59,6 +59,7 @@ binary_test <- function(kvals, p, sample.size, reps, tag, savemarker = 100) {
   proximal <- c()
 
   for (j in 1:trials) {
+    print(j)
     i <- j %% savemarker + 1
     binary_az_gen(tag, sample.size)
     raw.data <- data.import(tag, sample.size)

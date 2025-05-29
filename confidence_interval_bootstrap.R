@@ -47,7 +47,7 @@ colnames(df) <- c('est', 'norm_low', 'norm_high',
             'perc_low', 'perc_high',
             'base_low', 'base_high')
 
-for (i in 11:100){
+for (i in 1:100){
   print(i)
   set.seed(i)
   azGen('boot', 500)

@@ -63,7 +63,7 @@ data.import <- function(tag, n) {
 bar.plots <- function(tag, plot.title, true.val, sample.size, trials){
   temp.df <- read.csv(
   file.path(
-    "Data", "Estimates",
+    "Data", "Estimates", "fullests",
     paste("ests_", tag, as.character(sample.size),
           ".csv",
           sep = ""
@@ -75,11 +75,11 @@ colnames(temp.df) <- c("Latent", "Linear", "IPW", "IV", "Proximal")
 temp = melt(temp.df)
 colnames(temp) <- c('Method', 'estimate')
 p1 <- ggplot(temp) + 
-  geom_hline(yintercept = true.val, color = 'green',
+  geom_hline(yintercept = true.val, color = 'gray',
              linewidth = 1) + ylab("ATE Estimate") +
   geom_boxplot(aes(y = estimate, x = Method), outliers = FALSE) +
   ggtitle(plot.title) +
-    coord_cartesian(ylim = c(-.5, 1.5)) +
+    coord_cartesian(ylim = c(-.5, 1)) +
     theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, ".png",
                                           sep = ""
@@ -89,11 +89,11 @@ temp.df2 <- temp.df[,c('Latent', 'Linear', 'IPW', 'Proximal')]
 temp = melt(temp.df2)
 colnames(temp) <- c('Method', 'estimate')
 p2 <- ggplot(temp) + 
-  geom_hline(yintercept = true.val, color = 'green',
+  geom_hline(yintercept = true.val, color = 'gray',
              linewidth = 1) + ylab("ATE Estimate") +
   geom_boxplot(aes(y = estimate, x = Method), outliers = FALSE) +
   ggtitle(plot.title) +
-    coord_cartesian(ylim = c(-.5, 1.5)) +
+    coord_cartesian(ylim = c(-.5, 1)) +
     theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ggsave(file.path("Data", "Figures", paste(tag, "_", sample.size, "_", trials, "_noIV.png",
                                           sep = ""
@@ -104,8 +104,12 @@ return(list(p1, p2))
 
 
 ```{r}
+run_tests <- FALSE
+run_coverage <- FALSE
+
 trials <- 1000
-sample.size <- 500
+coverage_trials <- 100
+sample.size <- 1000
 ```
 
 ## Consistency
@@ -113,9 +117,9 @@ sample.size <- 500
 tag <- "consistency"
 k = 2
 p = 8
-sample.sizes <- seq(from = 500, to = 7500, by = 1000)
-test.consistency(tag, p, sample.sizes, 1:p, reps = trials)
-consistency.plots <- graph.consistency(tag, p, seq(from = 500, to = 7500, by = 1000))
+sample.sizes <- seq(from = 500, to = 5000, by = 500)
+# test.consistency(tag, p, sample.sizes, 1:p, reps = trials)
+consistency.plots <- graph.consistency(tag, p, seq(from = 500, to = 5000, by = 500))
 ```
 
 ## IV
@@ -125,9 +129,9 @@ tag = "iv2"
 k = 2
 p = 6
 
-iv_test(1:6, p, sample.size, trials, tag)
+# iv_test(1:6, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters", paste("param_", tag, ".RData", sep = "")))
-true_ate <- gamma[1]6
+true_ate <- gamma[1]
 iv.plots <- bar.plots(tag, "Instrument Variable", true_ate, sample.size, trials)
 ```
 
@@ -139,7 +143,7 @@ tag = "skew"
 k = 1
 p = 5
 
-skew_test(1:p, p, sample.size, trials, tag)
+# skew_test(1:p, p, sample.size, trials, tag)
 
 load(file.path("Data", "Parameters",
                  paste("param_", tag, sample.size, ".RData", sep = "")))
@@ -154,7 +158,7 @@ tag <- 'binary'
 k = 3
 p = 10
 
-binary_test(1:p, p, sample.size, trials, tag)
+# binary_test(1:p, p, sample.size, trials, tag, 10)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
@@ -169,11 +173,11 @@ set.seed(127)
 tag <- 'noLatent'
 p = 6
 
-no_latent_test(1:p, p, sample.size, trials, tag)
+# no_latent_test(1:p, p, sample.size, trials, tag, savemarker = 10)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1]
-nolatent.plots <- bar.plots(tag, "No Latent Variable", true_ate, sample.size, trials)
+nolatent.plots <- bar.plots(tag, "Direct Confounder", true_ate, sample.size, trials)
 ```
 
 ## Different ratios of Z to U
@@ -183,9 +187,9 @@ tag <- 'ratio'
 k <- 2
 pvals <- c(2, 4, 6, 8, 10, 12, 14, 16, 18, 20)
 
-ratio_test(1:max(pvals), pvals, sample.size, trials, tag)
+# ratio_test(1:max(pvals), pvals, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
-                 paste("param_", tag, pvals[1], ".RData", sep = "")))
+                 paste("param_", tag, 20, ".RData", sep = "")))
 true_ate <- gamma[1]
 ratio.plots <- graph.ratio(tag, pvals)
 ```
@@ -196,7 +200,7 @@ set.seed(127)
 tag <- 'squared'
 k = 1
 p = 6
-squared_test(1:p, p, sample.size, trials, tag)
+# squared_test(1:p, p, sample.size, trials, tag)
 load(file.path("Data", "Parameters",
                  paste("param_", tag, ".RData", sep = "")))
 true_ate <- gamma[1] + gamma[3]
@@ -204,8 +208,35 @@ square.plots <- bar.plots(tag, "Higher Order\nMoments", true_ate, sample.size, t
 ```
 
 ```{r}
+coverage.df <- data.frame("Case" = c("Higher order",
+                                     "Skew normal",
+                                     "Binary A",
+                                     "Direct confounder",
+                                     "IV"),
+                          "Coverage" = c(0.96,0.94,0.87,0.97,0.94))
+
+tag <- "noLatent"
+temp.df <- read.csv(
+  file.path(
+    "Data", "Estimates", "coverage",
+    paste("ests_", tag, as.character(sample.size),
+          ".csv",
+          sep = ""
+    )
+  ),
+  colClasses = "numeric"
+)
+colnames(temp.df) <- c("Latent", "low", "high", "Linear", "IPW", "IV", "Proximal")
+coverage <- sum(temp.df$low < .3 & temp.df$high > .3) / nrow(temp.df)
+```
+
+
+```{r}
 
 design1 <- "
+111112
+111112
+111112
 111112
 333332
 "
@@ -215,18 +246,22 @@ lineplots <- consistency.plots[[1]] + guide_area() +
   plot_layout(design = design1, guides = 'collect') +
   plot_annotation(tag_levels = "A") & theme(plot.tag.position = c(0,1))
 
-ggsave(file.path('Data', 'Figures', 'lineplotpanel.png'),
+ggsave(file.path('Data', 'Figures', 'lineplotpanel_grayscale.png'),
        plot = lineplots,
-       width = 8, height = 6, units = "in", dpi = 1200)
+       width = 8, height = 10, units = "in", dpi = 1200)
 
 lineplots_noiv <- consistency.plots[[2]] + guide_area() +
   ratio.plots[[2]] +
   plot_layout(design = design1, guides = 'collect') +
   plot_annotation(tag_levels = "A") & theme(plot.tag.position = c(0,1))
 
-ggsave(file.path('Data', 'Figures', 'lineplotpanel_noiv.png'),
+ggsave(file.path('Data', 'Figures', 'lineplotpanel_noiv_grayscale.png'),
        plot = lineplots_noiv,
-       width = 8, height = 4, units = "in", dpi = 1200)
+       width = 8, height = 10, units = "in", dpi = 1200)
+
+
+
+
 
 
 layout <- c(
@@ -236,22 +271,27 @@ layout <- c(
 
 plot(layout)
 
+# layout <- "
+# 123
+# 456
+# "
+
+library(gt)
 boxplotpanel <- 
-  (square.plots[[1]] + skew.plots[[1]] + binary.plots[[1]]) / (nolatent.plots[[1]] + iv.plots[[1]]) +
-    plot_layout(design = layout
-                ) +
+(square.plots[[1]] | skew.plots[[1]] | binary.plots[[1]]) / (nolatent.plots[[1]] | iv.plots[[1]]) +
+    plot_layout(design = layout) +
   plot_annotation(tag_levels = "A")
 
-ggsave(file.path('Data', 'Figures', 'boxplotpanel.png'), plot = boxplotpanel,
+ggsave(file.path('Data', 'Figures', 'boxplotpanel_grayscale.png'), plot = boxplotpanel,
        width = 8, height = 6, units = "in", dpi = 1200)
 
 
 boxplotpanel_noiv <- 
-  (square.plots[[2]] + skew.plots[[2]] + binary.plots[[2]])/ (nolatent.plots[[2]] + iv.plots[[2]]) +
+  (square.plots[[2]] | skew.plots[[2]] | binary.plots[[2]]) / (nolatent.plots[[2]] | iv.plots[[2]]) +
     plot_layout(design = layout) +
   plot_annotation(tag_levels = "A")
 
-ggsave(file.path('Data', 'Figures', 'boxplotpanel_noiv.png'), plot = boxplotpanel_noiv,
+ggsave(file.path('Data', 'Figures', 'boxplotpanel_noiv_grayscale.png'), plot = boxplotpanel_noiv,
        width = 8, height = 6, units = "in", dpi = 1200)
 ```
 

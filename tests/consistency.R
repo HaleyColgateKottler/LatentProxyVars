@@ -23,7 +23,6 @@ test.consistency <- function(tag, p, sample.sizes, kvals, savemarker = 100, reps
     proximal <- c()
 
     for (j in 1:reps) {
-      print(j)
       i <- j %% savemarker + 1
 
       azGen(tag, sample.size)
@@ -75,7 +74,7 @@ graph.consistency <- function(tag, p, sample.sizes) {
     j <- j + 1
     temp.df <- read.csv(
       file.path(
-        "Data", "Estimates",
+        "Data", "Estimates", "fullests",
         paste("ests_", tag, as.character(samp.size),
           ".csv",
           sep = ""
@@ -119,15 +118,20 @@ graph.consistency <- function(tag, p, sample.sizes) {
   ))
   true_ate <- gamma[1]
   main.plot1 <- ggplot(mean.ests) +
-    geom_ribbon(aes(
-      x = SampleSize, ymin = Q.25, ymax = Q.75, fill = Method),
-      alpha = .3
-    ) +
+    geom_ribbon(aes(x = SampleSize, ymin = Q.25, ymax = Q.75, group = Method),
+                alpha = 0.2) +
     geom_hline(yintercept = true_ate) +
-    geom_line(aes(x = SampleSize, y = Mean, group = Method, color = Method),
-              linewidth = 2
+    geom_line(aes(x = SampleSize, y = Q.25, group = Method, linetype = Method),
+              color = "gray50"
     ) +
-    geom_point(aes(x = SampleSize, y = Mean, color = Method), size = 3) +
+    geom_line(aes(x = SampleSize, y = Q.75, group = Method, linetype = Method),
+              color = "gray50"
+    ) +
+    geom_line(aes(x = SampleSize, y = Mean, group = Method, linetype = Method)
+    ) +
+    geom_point(aes(x = SampleSize, y = Q.25, shape = Method), color = "gray50") +
+    geom_point(aes(x = SampleSize, y = Q.75, shape = Method), color = "gray50") +
+    geom_point(aes(x = SampleSize, y = Mean, shape = Method)) +
     xlab("Sample Size") +
     ylab("ATE Estimate") + guides(alpha = "none") +
     theme(legend.position = c(.87, .5))
@@ -138,15 +142,20 @@ graph.consistency <- function(tag, p, sample.sizes) {
   
   mean.ests <- mean.ests[mean.ests$Method != 'IV', ]
   main.plot2 <- ggplot(mean.ests) +
-    geom_ribbon(aes(
-      x = SampleSize, ymin = Q.25, ymax = Q.75, fill = Method),
-      alpha = .3
-    ) +
+    geom_ribbon(aes(x = SampleSize, ymin = Q.25, ymax = Q.75, group = Method),
+                alpha = 0.2) +
     geom_hline(yintercept = true_ate) +
-    geom_line(aes(x = SampleSize, y = Mean, group = Method, color = Method),
-                  linewidth = 2
+    geom_line(aes(x = SampleSize, y = Q.25, group = Method, linetype = Method),
+              color = "gray50"
     ) +
-    geom_point(aes(x = SampleSize, y = Mean, color = Method), size = 3) +
+    geom_line(aes(x = SampleSize, y = Q.75, group = Method, linetype = Method),
+              color = "gray50"
+    ) +
+    geom_line(aes(x = SampleSize, y = Mean, group = Method, linetype = Method)
+    ) +
+    geom_point(aes(x = SampleSize, y = Q.25, shape = Method), color = "gray50") +
+    geom_point(aes(x = SampleSize, y = Q.75, shape = Method), color = "gray50") +
+    geom_point(aes(x = SampleSize, y = Mean, shape = Method)) +
     xlab("Sample Size") +
     ylab("ATE Estimate") + guides(alpha = "none") +
     theme(legend.position = c(.87, .5))
