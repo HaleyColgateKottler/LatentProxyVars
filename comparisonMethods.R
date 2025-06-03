@@ -1,4 +1,5 @@
 library(pracma)
+library('survey')
 
 # comparison methods
 nieveBinaryEst <- function(df) {
@@ -38,28 +39,34 @@ binaryIPWest <- function(df) {
 continuousIPWest <- function(df) {
   AZ <- subset(df, select = -c(Y))
   Z <- subset(AZ, select = -c(A))
-
+  
   m1 <- glm(formula = A ~ ., family = gaussian(link = "identity"), data = AZ)
   meanAZ <- predict(m1, newdata = Z, type = "response")
   varAZ <- var(df$A - meanAZ)
   weightings <- dnorm(df$A, mean = meanAZ, sd = sqrt(varAZ))
-
+  
   m2 <- glm(formula = A ~ 1, family = gaussian(link = "identity"), data = AZ)
   meanA <- predict(m2, newdata = df, type = "response")
   varA <- var(df$A - meanA)
   numerators <- dnorm(df$A, mean = meanA, sd = sqrt(varA))
-
-  full.weights <- numerators / weightings
+  
+  df$full.weights <- numerators / weightings
   df$A2 <- df$A^2
-  m3 <- glm(
-    formula = formula(paste("Y ~ 1 + A + A2 + ", paste0(colnames(Z), collapse = " +"))), family = gaussian(link = "identity"),
-    data = df, weights = full.weights)
-
+  design <- svydesign(
+    id = ~1,
+    weights = ~full.weights,
+    data = df
+  )
+  
+  m3 <- svyglm(
+    formula = formula(paste("Y ~ A + A2 + ", paste0(colnames(Z), collapse = " +"))), family = gaussian(link = "identity"),
+    data = df, design = design)
+  
   newdata1 <- data.frame("A" = 1, Z, "A2" = 1)
   EY1 <- mean(predict(m3, newdata1))
   newdata0 <- data.frame("A" = 0, Z, "A2" = 0)
   EY0 <- mean(predict(m3, newdata0))
-
+  
   return(EY1 - EY0)
 }
 
